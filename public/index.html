@@ -6,212 +6,301 @@
   <title>Zero Task Router — Zero UNLOCKED Hackathon</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* ── CSS Variables (themes) ──────────────────────────── */
+    /* ── CSS Variables ─────────────────────────────────────── */
     :root, [data-theme="dark"] {
-      --bg:          #0d0e14;
-      --card:        #13141c;
-      --card-border: rgba(255,255,255,0.07);
-      --input-bg:    #0a0b10;
-      --input-bord:  rgba(255,255,255,0.08);
-      --text-pri:    #f0f0f0;
-      --text-sec:    #888;
-      --text-mute:   #555;
-      --text-dim:    #383a45;
+      --bg:          #0d0e17;
+      --card:        #12141f;
+      --card-border: rgba(255,255,255,0.08);
+      --input-bg:    #0a0b14;
+      --input-bord:  rgba(255,255,255,0.1);
+      --text-pri:    #f2f2f5;
+      --text-sec:    #8892a4;
+      --text-mute:   #525870;
+      --text-dim:    #2e3248;
       --row-hover:   rgba(255,255,255,0.03);
-      --row-sel:     rgba(0,180,216,0.06);
-      --th-bord:     rgba(255,255,255,0.05);
-      --td-bord:     rgba(255,255,255,0.04);
-      --code-bg:     #0a0b10;
-      --code-bord:   rgba(255,255,255,0.06);
+      --row-sel:     rgba(0,180,216,0.07);
+      --th-bord:     rgba(255,255,255,0.06);
+      --td-bord:     rgba(255,255,255,0.05);
+      --code-bg:     #090a12;
+      --code-bord:   rgba(255,255,255,0.07);
       --term-bg:     #080910;
-      --term-bord:   rgba(255,255,255,0.06);
-      --result-bg:   #0d0e14;
-      --result-bord: rgba(255,255,255,0.06);
-      --slider-bg:   #1e2030;
-      --toggle-bg:   #1e2030;
-      --toggle-icon: "☾";
+      --term-bord:   rgba(255,255,255,0.07);
+      --sep:         rgba(255,255,255,0.06);
+      --slider-track:#1c1e30;
+      --toggle-bg:   #1c1e30;
     }
     [data-theme="light"] {
-      --bg:          #f4f5f7;
+      --bg:          #eef0f5;
       --card:        #ffffff;
-      --card-border: rgba(0,0,0,0.08);
-      --input-bg:    #f8f9fb;
-      --input-bord:  rgba(0,0,0,0.12);
-      --text-pri:    #0d0e14;
-      --text-sec:    #555;
-      --text-mute:   #999;
-      --text-dim:    #bbb;
-      --row-hover:   rgba(0,0,0,0.03);
-      --row-sel:     rgba(0,180,216,0.08);
+      --card-border: rgba(0,0,0,0.09);
+      --input-bg:    #f5f6fa;
+      --input-bord:  rgba(0,0,0,0.13);
+      --text-pri:    #0d0e17;
+      --text-sec:    #555e72;
+      --text-mute:   #8892a4;
+      --text-dim:    #c0c4d0;
+      --row-hover:   rgba(0,0,0,0.025);
+      --row-sel:     rgba(0,180,216,0.07);
       --th-bord:     rgba(0,0,0,0.07);
       --td-bord:     rgba(0,0,0,0.04);
-      --code-bg:     #f0f1f5;
+      --code-bg:     #f0f2f7;
       --code-bord:   rgba(0,0,0,0.08);
-      --term-bg:     #1a1b26;
-      --term-bord:   rgba(0,0,0,0.1);
-      --result-bg:   #1a1b26;
-      --result-bord: rgba(0,0,0,0.08);
-      --slider-bg:   #dde0e8;
-      --toggle-bg:   #e2e4ea;
-      --toggle-icon: "☀";
+      --term-bg:     #181b2e;
+      --term-bord:   rgba(0,0,0,0.08);
+      --sep:         rgba(0,0,0,0.07);
+      --slider-track:#d8dce8;
+      --toggle-bg:   #e2e5ee;
     }
 
-    /* ── Base ────────────────────────────────────────────── */
+    /* ── Reset & Base ──────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
     body {
-      background: var(--bg); color: var(--text-pri);
-      font-family: system-ui, -apple-system, sans-serif;
-      min-height: 100vh; transition: background 0.25s, color 0.25s;
+      background: var(--bg);
+      color: var(--text-pri);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
-    .card {
-      background: var(--card); border: 1px solid var(--card-border);
-      border-radius: 16px; padding: 28px;
-      transition: background 0.25s, border-color 0.25s;
-    }
-    .label {
-      font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--text-mute); margin-bottom: 14px;
-    }
-    .step { font-size: 13px; color: var(--text-sec); margin-bottom: 10px; font-weight: 500; }
 
-    /* ── Focus styles (accessibility) ───────────────────── */
-    :focus-visible {
-      outline: 2px solid #00b4d8;
-      outline-offset: 2px;
-      border-radius: 4px;
+    /* ── Cards ─────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 26px 28px;
     }
-    /* remove default outline only when using mouse */
+
+    /* ── Section labels ────────────────────────────────────── */
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-pri);
+      margin-bottom: 18px;
+    }
+    .step-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-sec);
+      margin-bottom: 10px;
+    }
+
+    /* ── Focus ─────────────────────────────────────────────── */
+    :focus-visible { outline: 2px solid #00b4d8; outline-offset: 2px; border-radius: 4px; }
     :focus:not(:focus-visible) { outline: none; }
 
-    /* ── Inputs ──────────────────────────────────────────── */
-    input[type=text], textarea {
-      background: var(--input-bg); border: 1px solid var(--input-bord);
-      color: var(--text-pri); border-radius: 10px; padding: 12px 16px;
-      font-size: 14px; font-family: inherit;
-      transition: border-color 0.2s, background 0.25s;
+    /* ── Inputs ────────────────────────────────────────────── */
+    .task-input {
+      flex: 1;
+      background: var(--input-bg);
+      border: 1px solid var(--input-bord);
+      color: var(--text-pri);
+      border-radius: 10px;
+      padding: 11px 15px;
+      font-size: 14px;
+      font-family: inherit;
     }
-    input[type=text]:focus, textarea:focus {
-      outline: none; border-color: rgba(0,180,216,0.5);
-      box-shadow: 0 0 0 3px rgba(0,180,216,0.12);
+    .task-input::placeholder { color: var(--text-mute); }
+    .task-input:focus {
+      outline: none;
+      border-color: rgba(0,180,216,0.45);
+      box-shadow: 0 0 0 3px rgba(0,180,216,0.1);
     }
-    ::placeholder { color: var(--text-dim); }
 
-    /* ── Buttons ─────────────────────────────────────────── */
-    button { cursor: pointer; font-family: inherit; font-weight: 600; border: none; transition: all 0.15s; }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    button:focus-visible {
-      outline: 2px solid #00b4d8; outline-offset: 2px; border-radius: 8px;
-    }
+    /* ── Buttons ───────────────────────────────────────────── */
+    button { cursor: pointer; font-family: inherit; border: none; }
+    button:disabled { opacity: 0.38; cursor: not-allowed; }
 
     .btn-find {
-      background: #00b4d8; color: #000; border-radius: 10px;
-      padding: 12px 22px; font-size: 14px; font-weight: 700; white-space: nowrap;
+      background: #00b4d8;
+      color: #000;
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 10px;
+      padding: 11px 22px;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
     }
-    .btn-find:hover:not(:disabled) { background: #00cef5; transform: translateY(-1px); }
-    .btn-find:active:not(:disabled) { transform: translateY(0); }
+    .btn-find:hover:not(:disabled) { background: #00cef5; }
 
     .btn-run {
-      background: #7c3aed; color: #fff; border-radius: 12px;
-      padding: 14px 32px; font-size: 15px; font-weight: 700; letter-spacing: 0.02em;
+      background: #7c3aed;
+      color: #fff;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.03em;
+      border-radius: 12px;
+      padding: 13px 28px;
     }
-    .btn-run:hover:not(:disabled) { background: #8b5cf6; transform: translateY(-1px); }
-    .btn-run:active:not(:disabled) { transform: translateY(0); }
+    .btn-run:hover:not(:disabled) { background: #8b5cf6; }
 
-    /* ── Theme toggle ────────────────────────────────────── */
     .btn-toggle {
-      background: var(--toggle-bg); color: var(--text-sec);
-      border-radius: 20px; padding: 6px 14px; font-size: 13px;
-      border: 1px solid var(--card-border); display: flex; align-items: center; gap: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--toggle-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-sec);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
     }
-    .btn-toggle:hover { background: var(--row-hover); }
+    .btn-toggle:hover { opacity: 0.8; }
 
-    /* ── Table ───────────────────────────────────────────── */
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    /* ── Table ─────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; }
     th {
-      font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
-      color: var(--text-mute); padding: 8px 12px; text-align: left;
+      font-size: 11px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      padding: 7px 12px;
+      text-align: left;
       border-bottom: 1px solid var(--th-bord);
+      font-weight: 600;
     }
-    td { padding: 14px 12px; border-bottom: 1px solid var(--td-bord); font-size: 14px; vertical-align: middle; }
-    .cap-row { cursor: pointer; transition: background 0.15s; }
+    td {
+      padding: 13px 12px;
+      border-bottom: 1px solid var(--td-bord);
+      vertical-align: middle;
+    }
+    .cap-row { cursor: pointer; }
     .cap-row:hover td { background: var(--row-hover); }
     .cap-row.selected td { background: var(--row-sel); }
     .cap-row:focus-visible { outline: 2px solid #00b4d8; outline-offset: -2px; }
-    .badge-selected {
-      background: rgba(0,180,216,0.15); color: #00b4d8;
-      border: 1px solid rgba(0,180,216,0.3); border-radius: 20px;
-      padding: 4px 14px; font-size: 12px; font-weight: 700; white-space: nowrap;
-    }
-    .cost-val { color: var(--text-pri); font-weight: 600; font-size: 13px; }
-    .rating-val { color: var(--text-pri); font-size: 13px; }
-    .cap-desc { color: var(--text-sec); font-size: 13px; }
-    .cap-name { font-weight: 700; color: var(--text-pri); }
 
-    /* ── Slider ──────────────────────────────────────────── */
+    .cap-name { font-weight: 700; color: var(--text-pri); font-size: 14px; }
+    .cap-desc { color: var(--text-sec); font-size: 13px; }
+    .cap-cost { color: var(--text-pri); font-weight: 600; font-size: 13px; white-space: nowrap; }
+    .cap-rating { color: var(--text-pri); font-size: 13px; white-space: nowrap; }
+
+    .badge-sel {
+      display: inline-block;
+      background: rgba(0,180,216,0.13);
+      color: #00b4d8;
+      border: 1px solid rgba(0,180,216,0.3);
+      border-radius: 20px;
+      padding: 3px 14px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* ── Slider ────────────────────────────────────────────── */
     input[type=range] {
-      -webkit-appearance: none; width: 100%; height: 4px;
-      border-radius: 2px; background: var(--slider-bg);
-      outline: none; border: none; cursor: pointer;
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--slider-track);
+      cursor: pointer;
+      border: none;
     }
     input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 16px; height: 16px;
-      border-radius: 50%; background: #00b4d8; cursor: pointer;
-      box-shadow: 0 0 8px rgba(0,180,216,0.5);
-    }
-    input[type=range]:focus-visible {
-      outline: 2px solid #00b4d8; outline-offset: 4px; border-radius: 4px;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #00b4d8;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0,180,216,0.6);
     }
 
-    /* ── Code / Terminal ─────────────────────────────────── */
+    /* ── Code & Terminal ───────────────────────────────────── */
     .code-block {
-      background: var(--code-bg); border: 1px solid var(--code-bord);
-      border-radius: 10px; padding: 16px;
+      background: var(--code-bg);
+      border: 1px solid var(--code-bord);
+      border-radius: 10px;
+      padding: 14px 16px;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 12px; color: #8892b0; line-height: 1.7; overflow-y: auto;
-      transition: background 0.25s;
+      font-size: 12px;
+      color: #8892b0;
+      line-height: 1.75;
+      overflow-y: auto;
     }
     .terminal {
-      background: var(--term-bg); border: 1px solid var(--term-bord);
-      border-radius: 10px; padding: 16px;
+      background: var(--term-bg);
+      border: 1px solid var(--term-bord);
+      border-radius: 10px;
+      padding: 16px;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 13px; line-height: 1.8; overflow-y: auto;
-      transition: background 0.25s;
+      font-size: 13px;
+      line-height: 1.85;
+      overflow-y: auto;
+      flex: 1;
     }
 
-    /* ── Status dot ──────────────────────────────────────── */
+    /* ── Status dot ────────────────────────────────────────── */
     .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-    .dot-healthy  { background: #22c55e; box-shadow: 0 0 5px #22c55e; }
-    .dot-stable   { background: #f59e0b; box-shadow: 0 0 5px #f59e0b; }
-    .dot-degraded { background: #ef4444; box-shadow: 0 0 5px #ef4444; }
-    .dot-unrated  { background: #555; }
+    .dot-ok   { background: #22c55e; box-shadow: 0 0 5px #22c55e; }
+    .dot-warn { background: #f59e0b; box-shadow: 0 0 5px #f59e0b; }
+    .dot-err  { background: #ef4444; box-shadow: 0 0 5px #ef4444; }
+    .dot-idle { background: var(--text-mute); }
 
-    /* ── Stars ───────────────────────────────────────────── */
-    .star { font-size: 18px; cursor: pointer; color: var(--text-dim); transition: color 0.1s; }
-    .star:hover ~ .star { color: var(--text-dim) !important; }
+    /* ── Stars ─────────────────────────────────────────────── */
+    .star {
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text-dim);
+      background: none;
+      border: none;
+      padding: 2px;
+      line-height: 1;
+    }
     .star.lit { color: #f59e0b; }
 
-    /* ── Spinner ─────────────────────────────────────────── */
+    /* ── Spinner ───────────────────────────────────────────── */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
-      width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.15);
-      border-top-color: #00b4d8; border-radius: 50%;
-      animation: spin 0.7s linear infinite; display: inline-block; vertical-align: middle;
+      width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-top-color: #00b4d8;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
     }
 
-    /* ── Animations ──────────────────────────────────────── */
-    @keyframes fadein { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
-    .fadein { animation: fadein 0.22s ease forwards; }
+    /* ── Fadein ────────────────────────────────────────────── */
+    @keyframes fadein { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
+    .fadein { animation: fadein 0.2s ease forwards; }
 
-    /* ── Skip link (a11y) ────────────────────────────────── */
+    /* ── Skip link ─────────────────────────────────────────── */
     .skip-link {
       position: absolute; top: -40px; left: 8px; z-index: 100;
-      background: #00b4d8; color: #000; padding: 8px 16px; border-radius: 4px;
-      font-weight: 700; font-size: 14px; text-decoration: none;
-      transition: top 0.2s;
+      background: #00b4d8; color: #000; padding: 8px 16px;
+      border-radius: 4px; font-weight: 700; text-decoration: none;
     }
     .skip-link:focus { top: 8px; }
 
-    /* ── Reduced motion ──────────────────────────────────── */
+    /* ── Separator ─────────────────────────────────────────── */
+    .sep { height: 1px; background: var(--sep); margin: 0; }
+
+    /* ── Textarea ──────────────────────────────────────────── */
+    textarea {
+      background: var(--code-bg);
+      border: 1px solid var(--code-bord);
+      color: #a6e3a1;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      line-height: 1.75;
+      resize: vertical;
+      width: 100%;
+      display: block;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: rgba(0,180,216,0.4);
+      box-shadow: 0 0 0 3px rgba(0,180,216,0.08);
+    }
+
+    /* ── Reduced motion ────────────────────────────────────── */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     }
@@ -219,541 +308,536 @@
 </head>
 <body>
 
-  <!-- Skip navigation link (screen readers / keyboard users) -->
-  <a href="#main-content" class="skip-link">Skip to main content</a>
+<a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <div style="max-width:1280px; margin:0 auto; padding:28px 24px;" id="main-content">
+<div style="max-width:1300px; margin:0 auto; padding:26px 22px;" id="main-content">
 
-    <!-- ── HEADER ──────────────────────────────────────── -->
-    <header role="banner" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; flex-wrap:wrap; gap:12px;">
-      <h1 style="font-size:22px; font-weight:800; letter-spacing:-0.02em; color:var(--text-pri);">
-        ZERO TASK ROUTER
-      </h1>
-      <div style="display:flex; align-items:center; gap:12px;">
-        <span style="font-size:13px; color:var(--text-mute);" aria-label="Built at Zero UNLOCKED Hackathon, May 2026">
-          Built at Zero UNLOCKED Hackathon · May 2026
-        </span>
-        <!-- Theme toggle -->
-        <button class="btn-toggle" id="theme-btn" onclick="toggleTheme()"
-          aria-label="Switch to light mode" aria-pressed="false">
-          <span id="theme-icon" aria-hidden="true">☾</span>
-          <span id="theme-label">Dark</span>
-        </button>
-      </div>
-    </header>
+  <!-- ── HEADER ──────────────────────────────────────────── -->
+  <header role="banner" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+    <h1 style="font-size:20px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-pri);">
+      Zero Task Router
+    </h1>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span style="font-size:13px; color:var(--text-mute);">
+        Built at Zero UNLOCKED Hackathon · May 2026
+      </span>
+      <button class="btn-toggle" id="theme-btn" onclick="toggleTheme()" aria-label="Switch to light mode" aria-pressed="false">
+        <span id="theme-icon" aria-hidden="true">☾</span>
+        <span id="theme-label">Dark</span>
+      </button>
+    </div>
+  </header>
 
-    <main role="main">
+  <main role="main">
 
-      <!-- ── TOP ROW ──────────────────────────────────── -->
-      <div style="display:grid; grid-template-columns:1fr 360px; gap:16px; margin-bottom:16px;"
-           role="region" aria-label="Task and wallet controls">
+    <!-- ── TOP ROW ─────────────────────────────────────────── -->
+    <div style="display:grid; grid-template-columns:1fr 340px; gap:14px; margin-bottom:14px;">
 
-        <!-- TOP-LEFT: Task & Registry -->
-        <section class="card" aria-labelledby="task-heading">
-          <div class="label" id="task-heading">Task &amp; Registry</div>
+      <!-- TOP-LEFT: Task & Registry -->
+      <section class="card" aria-labelledby="task-h">
+        <div class="card-title" id="task-h">Task &amp; Registry</div>
 
-          <div class="step" id="step1-label">1. Describe Task</div>
-          <div style="display:flex; gap:10px; margin-bottom:20px;" role="search">
-            <label for="task-input" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">
-              Describe what you want to do
-            </label>
-            <input type="text" id="task-input"
-              placeholder="Get current weather in New York and translate to Spanish"
-              style="flex:1;"
-              aria-label="Describe your task"
-              aria-describedby="step1-label"
-              autocomplete="off"
-              onkeydown="if(event.key==='Enter')doSearch()" />
-            <button class="btn-find" id="search-btn" onclick="doSearch()"
-              aria-label="Find matching capabilities for your task">
-              Find Capability
-            </button>
+        <div class="step-label" id="sl1">1. Describe Task</div>
+        <div style="display:flex; gap:10px; margin-bottom:22px;">
+          <label for="task-input" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Describe your task</label>
+          <input
+            type="text"
+            id="task-input"
+            class="task-input"
+            placeholder="Get current weather in New York and translate to Spanish"
+            aria-label="Describe what you want to do"
+            autocomplete="off"
+            onkeydown="if(event.key==='Enter')doSearch()"
+          />
+          <button class="btn-find" id="search-btn" onclick="doSearch()" aria-label="Find matching capabilities">
+            Find Capability
+          </button>
+        </div>
+
+        <!-- Results table -->
+        <div id="results-wrap" style="display:none;" aria-live="polite">
+          <p style="font-size:12px; color:var(--text-mute); margin-bottom:8px;">
+            <span id="result-count">0</span> capabilities found — click a row to inspect
+          </p>
+          <table role="grid" aria-label="Capability results">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Description</th>
+                <th scope="col">Rating</th>
+                <th scope="col">Cost</th>
+                <th scope="col"><span style="position:absolute;width:1px;height:1px;overflow:hidden">Action</span></th>
+              </tr>
+            </thead>
+            <tbody id="results-tbody"></tbody>
+          </table>
+        </div>
+
+        <div id="empty-state" style="color:var(--text-dim); font-size:13px; padding:4px 0;" aria-live="polite">
+          Search results will appear here
+        </div>
+      </section>
+
+      <!-- TOP-RIGHT: Wallet & Controls -->
+      <section class="card" aria-labelledby="wallet-h" style="display:flex; flex-direction:column; gap:0;">
+        <div class="card-title" id="wallet-h" style="margin-bottom:16px;">Wallet &amp; Controls</div>
+
+        <!-- Balance -->
+        <div style="text-align:center; padding:10px 0 16px;">
+          <div id="balance-display"
+            style="font-size:48px; font-weight:900; letter-spacing:-0.03em; line-height:1.1; color:var(--text-pri);"
+            aria-live="polite" aria-label="Wallet balance">—</div>
+          <div style="font-size:12px; color:var(--text-mute); margin-top:5px;">(Base Network)</div>
+        </div>
+
+        <div class="sep" style="margin-bottom:18px;"></div>
+
+        <!-- Cost Guard -->
+        <div style="margin-bottom:4px;">
+          <label for="max-pay-slider" style="font-size:13px; font-weight:600; color:var(--text-sec); display:block; margin-bottom:12px;">
+            Cost Guard (Max Pay/Call)
+          </label>
+          <input
+            type="range"
+            id="max-pay-slider"
+            min="0.00" max="1.00" step="0.01" value="0.05"
+            aria-label="Maximum payment per call in USDC"
+            aria-valuemin="0" aria-valuemax="1" aria-valuenow="0.05"
+            oninput="updateMaxPay(this.value)"
+          />
+          <div style="display:flex; justify-content:space-between; margin-top:5px;">
+            <span style="font-size:11px; color:var(--text-mute);">0.00 USDC</span>
+            <span style="font-size:11px; color:var(--text-mute);">1.00 USDC</span>
           </div>
-
-          <!-- Results Table -->
-          <div id="results-wrap" style="display:none;" role="region" aria-label="Search results" aria-live="polite">
-            <p style="font-size:12px; color:var(--text-mute); margin-bottom:8px;">
-              <span id="result-count">0</span> capabilities found — click a row to inspect
-            </p>
-            <table role="grid" aria-label="Capability search results">
-              <thead>
-                <tr>
-                  <th scope="col">Name</th>
-                  <th scope="col">Description</th>
-                  <th scope="col">Rating</th>
-                  <th scope="col">Cost</th>
-                  <th scope="col"><span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Actions</span></th>
-                </tr>
-              </thead>
-              <tbody id="results-tbody" role="rowgroup"></tbody>
-            </table>
+          <div style="text-align:center; margin-top:4px;">
+            <span id="max-pay-label"
+              style="font-size:15px; font-weight:700; color:#00b4d8;"
+              aria-live="polite">0.05 USDC</span>
           </div>
+        </div>
 
-          <!-- Empty state -->
-          <div id="empty-state" aria-live="polite" style="color:var(--text-dim); font-size:13px; padding:8px 0;">
-            Search results will appear here
+        <div class="sep" style="margin:16px 0;"></div>
+
+        <!-- Wallet address -->
+        <div style="margin-bottom:14px;">
+          <div style="font-size:11px; color:var(--text-mute); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Wallet</div>
+          <div style="font-family:'Courier New',monospace; font-size:10px; color:var(--text-dim); word-break:break-all;">
+            0x35AcA9684f8873407B476965e9Eb4239519a6A60
           </div>
-        </section>
+        </div>
 
-        <!-- TOP-RIGHT: Wallet & Controls -->
-        <section class="card" aria-labelledby="wallet-heading" style="display:flex; flex-direction:column; gap:20px;">
-          <div class="label" id="wallet-heading">Wallet &amp; Controls</div>
+        <!-- Status row -->
+        <div style="display:flex; align-items:center; gap:8px;" role="status" aria-live="polite">
+          <span id="wallet-dot" class="dot dot-idle" aria-hidden="true"></span>
+          <span id="wallet-status" style="font-size:12px; color:var(--text-mute);">Checking…</span>
+        </div>
+      </section>
+    </div>
 
-          <!-- Balance -->
-          <div style="text-align:center; padding:8px 0;">
-            <div id="balance-display"
-              style="font-size:52px; font-weight:900; letter-spacing:-0.04em; line-height:1; color:var(--text-pri);"
-              aria-live="polite" aria-label="Wallet balance">—</div>
-            <div style="font-size:13px; color:var(--text-mute); margin-top:6px;">(Base Network)</div>
+    <!-- ── BOTTOM ROW ───────────────────────────────────────── -->
+    <div style="display:grid; grid-template-columns:330px 1fr; gap:14px;">
+
+      <!-- BOTTOM-LEFT: Capability Schema -->
+      <section class="card" aria-labelledby="schema-h" style="display:flex; flex-direction:column; gap:0;">
+        <div class="card-title" id="schema-h">Capability Schema</div>
+        <div class="step-label">2. Inspect Capability</div>
+
+        <div id="schema-empty" style="color:var(--text-dim); font-size:13px; padding:4px 0;" aria-live="polite">
+          Select a capability above →
+        </div>
+
+        <div id="schema-content" style="display:none;">
+          <div class="code-block" id="schema-code"
+            style="max-height:180px;"
+            tabindex="0"
+            role="region"
+            aria-label="Capability JSON schema"
+            aria-live="polite"></div>
+
+          <div style="margin-top:14px;">
+            <div class="step-label" style="margin-bottom:8px;">
+              3. Request Body
+              <span style="color:var(--text-dim); font-size:11px; font-weight:400;">(editable)</span>
+            </div>
+            <textarea
+              id="request-body"
+              style="height:100px;"
+              aria-label="Editable request body"
+              spellcheck="false"></textarea>
           </div>
+        </div>
+      </section>
 
-          <div style="height:1px; background:var(--card-border);"></div>
+      <!-- BOTTOM-RIGHT: Run & Results -->
+      <section class="card" aria-labelledby="run-h" style="display:flex; flex-direction:column; gap:14px;">
 
-          <!-- Cost Guard -->
+        <div style="display:flex; align-items:center; justify-content:space-between;">
           <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-              <label for="max-pay-slider" style="font-size:13px; font-weight:600; color:var(--text-sec);">
-                Cost Guard (Max Pay/Call)
-              </label>
-            </div>
-            <input type="range" id="max-pay-slider" min="0.00" max="1.00" step="0.01" value="0.05"
-              aria-label="Maximum payment per API call in USDC"
-              aria-valuemin="0" aria-valuemax="1" aria-valuenow="0.05"
-              oninput="updateMaxPay(this.value)" />
-            <div style="display:flex; justify-content:space-between; margin-top:6px;" aria-hidden="true">
-              <span style="font-size:11px; color:var(--text-mute);">0.00 USDC</span>
-              <span id="max-pay-label" style="font-size:14px; font-weight:700; color:#00b4d8;"
-                aria-live="polite" aria-label="Current max pay value">0.05 USDC</span>
-              <span style="font-size:11px; color:var(--text-mute);">1.00 USDC</span>
-            </div>
+            <div class="card-title" id="run-h" style="margin-bottom:3px;">Run &amp; Results</div>
+            <div class="step-label" style="margin-bottom:0;">4. Execute Task</div>
           </div>
+          <button class="btn-run" id="run-btn" onclick="doRun()" disabled
+            aria-label="Run selected capability — auto-pays via x402"
+            aria-disabled="true">
+            RUN CAPABILITY
+          </button>
+        </div>
 
-          <div style="height:1px; background:var(--card-border);"></div>
-
-          <!-- Wallet address -->
-          <div>
-            <div style="font-size:11px; color:var(--text-mute); margin-bottom:4px;">Wallet Address</div>
-            <div style="font-family:'Courier New',monospace; font-size:10px; color:var(--text-dim); word-break:break-all;"
-              aria-label="Wallet address: 0x35AcA9684f8873407B476965e9Eb4239519a6A60">
-              0x35AcA9684f8873407B476965e9Eb4239519a6A60
-            </div>
+        <!-- Terminal -->
+        <div class="terminal" id="terminal"
+          style="min-height:240px;"
+          role="log"
+          aria-label="Execution log"
+          aria-live="polite"
+          tabindex="0">
+          <div class="fadein">
+            <span style="color:#00b4d8;">$</span>
+            <span style="color:#2e3552; margin-left:8px;">zero task router ready_</span>
           </div>
+        </div>
 
-          <!-- Status -->
-          <div style="display:flex; align-items:center; gap:8px;" role="status" aria-live="polite">
-            <span id="wallet-dot" class="dot dot-unrated" aria-hidden="true"></span>
-            <span id="wallet-label" style="font-size:12px; color:var(--text-mute);">Checking wallet...</span>
-          </div>
-        </section>
-      </div>
-
-      <!-- ── BOTTOM ROW ────────────────────────────────── -->
-      <div style="display:grid; grid-template-columns:340px 1fr; gap:16px;">
-
-        <!-- BOTTOM-LEFT: Capability Schema -->
-        <section class="card" aria-labelledby="schema-heading">
-          <div class="label" id="schema-heading">Capability Schema</div>
-          <div class="step">2. Inspect Capability</div>
-
-          <div id="schema-empty" aria-live="polite"
-            style="color:var(--text-dim); font-size:13px; padding:8px 0;">
-            Select a capability above →
-          </div>
-
-          <div id="schema-content" style="display:none;">
-            <div class="code-block" id="schema-code"
-              style="max-height:200px;" tabindex="0" role="region"
-              aria-label="Capability JSON schema" aria-live="polite"></div>
-
-            <div style="margin-top:16px;">
-              <label for="request-body" class="step" style="display:block; margin-bottom:8px; cursor:auto;">
-                3. Request Body
-                <span style="color:var(--text-dim); font-size:11px; font-weight:400;">(editable)</span>
-              </label>
-              <textarea id="request-body" class="code-block"
-                style="width:100%; height:110px; resize:vertical; display:block; color:#a6e3a1;"
-                aria-label="Editable request body JSON — modify before running"
-                spellcheck="false"></textarea>
-            </div>
-          </div>
-        </section>
-
-        <!-- BOTTOM-RIGHT: Run & Results -->
-        <section class="card" aria-labelledby="run-heading" style="display:flex; flex-direction:column; gap:16px;">
-          <div style="display:flex; align-items:center; justify-content:space-between;">
-            <div>
-              <div class="label" id="run-heading" style="margin-bottom:4px;">Run &amp; Results</div>
-              <div class="step" style="margin-bottom:0;">4. Execute Task</div>
-            </div>
-            <button class="btn-run" id="run-btn" onclick="doRun()" disabled
-              aria-label="Run selected capability and pay automatically via x402"
-              aria-disabled="true">
-              RUN CAPABILITY
-            </button>
-          </div>
-
-          <!-- Terminal -->
-          <div class="terminal" id="terminal"
-            style="flex:1; min-height:260px;" role="log"
-            aria-label="Execution log" aria-live="polite" tabindex="0">
-            <div class="term-line fadein">
-              <span style="color:#00b4d8;" aria-hidden="true">$</span>
-              <span style="color:#2a3040; margin-left:8px;">zero task router ready_</span>
-            </div>
-          </div>
-
-          <!-- Review -->
-          <div id="review-section" style="display:none;"
-            role="region" aria-label="Rate this capability"
-            style="border-top:1px solid var(--card-border); padding-top:16px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-              <fieldset style="border:none; display:flex; gap:24px; align-items:center;">
-                <legend style="font-size:11px; color:var(--text-mute); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; width:100%;">
-                  Rate this capability
-                </legend>
+        <!-- Review -->
+        <div id="review-section" style="display:none; border-top:1px solid var(--sep); padding-top:14px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <fieldset style="border:none;">
+              <legend style="font-size:11px; color:var(--text-mute); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:8px;">
+                Rate this capability
+              </legend>
+              <div style="display:flex; gap:24px;">
                 <div>
-                  <div style="font-size:11px; color:var(--text-mute); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em;">
-                    Accuracy
-                  </div>
-                  <div id="stars-accuracy" role="radiogroup" aria-label="Accuracy rating, 1 to 5 stars"></div>
+                  <div style="font-size:11px; color:var(--text-mute); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.06em;">Accuracy</div>
+                  <div id="stars-accuracy" role="radiogroup" aria-label="Accuracy rating"></div>
                 </div>
                 <div>
-                  <div style="font-size:11px; color:var(--text-mute); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em;">
-                    Value
-                  </div>
-                  <div id="stars-value" role="radiogroup" aria-label="Value for money rating, 1 to 5 stars"></div>
+                  <div style="font-size:11px; color:var(--text-mute); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.06em;">Value</div>
+                  <div id="stars-value" role="radiogroup" aria-label="Value rating"></div>
                 </div>
-              </fieldset>
-              <div style="display:flex; align-items:center; gap:12px;">
-                <span id="review-confirm" style="font-size:13px; color:#22c55e; display:none;" role="status">
-                  ✓ Review submitted. Ranking updated.
-                </span>
-                <button id="review-btn" onclick="doReview()"
-                  aria-label="Submit capability review"
-                  style="background:rgba(124,58,237,0.15); border:1px solid rgba(124,58,237,0.3);
-                    color:#a78bfa; border-radius:8px; padding:8px 18px; font-size:13px;">
-                  Submit Review
-                </button>
               </div>
+            </fieldset>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span id="review-confirm" style="font-size:13px; color:#22c55e; display:none;" role="status">✓ Review submitted.</span>
+              <button id="review-btn" onclick="doReview()"
+                style="background:rgba(124,58,237,0.15); border:1px solid rgba(124,58,237,0.3); color:#a78bfa; border-radius:8px; padding:8px 18px; font-size:13px; font-weight:600;">
+                Submit Review
+              </button>
             </div>
           </div>
-        </section>
-      </div>
-    </main>
-  </div>
+        </div>
 
-  <!-- ── JAVASCRIPT ─────────────────────────────────────── -->
-  <script>
-    // ── Theme ──────────────────────────────────────────────
-    let isDark = true
-    function toggleTheme() {
-      isDark = !isDark
-      const html = document.documentElement
-      const btn  = document.getElementById('theme-btn')
-      const icon = document.getElementById('theme-icon')
-      const lbl  = document.getElementById('theme-label')
-      if (isDark) {
-        html.setAttribute('data-theme', 'dark')
-        icon.textContent = '☾'; lbl.textContent = 'Dark'
-        btn.setAttribute('aria-label', 'Switch to light mode')
-        btn.setAttribute('aria-pressed', 'false')
-      } else {
-        html.setAttribute('data-theme', 'light')
-        icon.textContent = '☀'; lbl.textContent = 'Light'
-        btn.setAttribute('aria-label', 'Switch to dark mode')
-        btn.setAttribute('aria-pressed', 'true')
-      }
+      </section>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── JAVASCRIPT ──────────────────────────────────────────── -->
+<script>
+  /* ── Theme ───────────────────────────────────────────────── */
+  let isDark = true
+  function toggleTheme() {
+    isDark = !isDark
+    const html = document.documentElement
+    const icon = document.getElementById('theme-icon')
+    const lbl  = document.getElementById('theme-label')
+    const btn  = document.getElementById('theme-btn')
+    if (isDark) {
+      html.setAttribute('data-theme','dark')
+      icon.textContent = '☾'; lbl.textContent = 'Dark'
+      btn.setAttribute('aria-label','Switch to light mode')
+      btn.setAttribute('aria-pressed','false')
+    } else {
+      html.setAttribute('data-theme','light')
+      icon.textContent = '☀'; lbl.textContent = 'Light'
+      btn.setAttribute('aria-label','Switch to dark mode')
+      btn.setAttribute('aria-pressed','true')
     }
-    // Respect system preference on load
-    if (window.matchMedia('(prefers-color-scheme: light)').matches) toggleTheme()
+  }
+  if (window.matchMedia('(prefers-color-scheme: light)').matches) toggleTheme()
 
-    // ── State ──────────────────────────────────────────────
-    let capabilities   = []
-    let selectedCap    = null
-    let detailData     = null
-    let currentRunId   = null
-    let reviewAccuracy = 0
-    let reviewValue    = 0
-    const STATUS_COLOR = { healthy:'#22c55e', stable:'#f59e0b', degraded:'#ef4444', unrated:'#555' }
+  /* ── State ───────────────────────────────────────────────── */
+  let capabilities   = []
+  let selectedCap    = null
+  let detailData     = null
+  let currentRunId   = null
+  let reviewAccuracy = 0
+  let reviewValue    = 0
 
-    // ── Init ───────────────────────────────────────────────
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('task-input').value   = ''
-      document.getElementById('request-body').value = ''
-      initStars('stars-accuracy', n => { reviewAccuracy = n; renderStars('stars-accuracy', n) })
-      initStars('stars-value',    n => { reviewValue    = n; renderStars('stars-value', n) })
-      pollWallet()
-      setInterval(pollWallet, 8000)
+  /* ── Init ────────────────────────────────────────────────── */
+  window.addEventListener('DOMContentLoaded', () => {
+    initStars('stars-accuracy', n => { reviewAccuracy = n; renderStars('stars-accuracy', n) })
+    initStars('stars-value',    n => { reviewValue    = n; renderStars('stars-value', n)    })
+    pollWallet()
+    setInterval(pollWallet, 9000)
+  })
+
+  /* ── Cost Guard ──────────────────────────────────────────── */
+  function updateMaxPay(v) {
+    document.getElementById('max-pay-label').textContent = parseFloat(v).toFixed(2) + ' USDC'
+    document.getElementById('max-pay-slider').setAttribute('aria-valuenow', v)
+  }
+
+  /* ── Wallet ──────────────────────────────────────────────── */
+  async function pollWallet() {
+    try {
+      const { balance } = await fetch('/api/balance').then(r => r.json())
+      const bal = balance ?? 0
+      const el  = document.getElementById('balance-display')
+      el.textContent = bal.toFixed(2) + ' USDC'
+      el.setAttribute('aria-label', `Wallet balance: ${bal.toFixed(2)} USDC`)
+      const dot = document.getElementById('wallet-dot')
+      const lbl = document.getElementById('wallet-status')
+      if (bal > 0) {
+        dot.className = 'dot dot-ok'
+        lbl.textContent = 'Funded · Ready'
+        lbl.style.color = '#22c55e'
+      } else {
+        dot.className = 'dot dot-err'
+        lbl.textContent = 'No funds'
+        lbl.style.color = '#ef4444'
+      }
+    } catch {}
+  }
+
+  /* ── Terminal ────────────────────────────────────────────── */
+  const C = { cmd:'#00b4d8', info:'#89b4fa', success:'#a6e3a1', pay:'#f9e2af', error:'#f38ba8' }
+  function termLog(text, type = 'info') {
+    const t = document.getElementById('terminal')
+    const d = document.createElement('div')
+    d.className = 'fadein'
+    d.innerHTML = `<span style="color:${C[type]||'#555'};margin-right:8px;">›</span><span style="color:${C[type]||'#cdd6f4'}">${esc(text)}</span>`
+    t.appendChild(d)
+    t.scrollTop = t.scrollHeight
+  }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+
+  /* ── Search ──────────────────────────────────────────────── */
+  async function doSearch() {
+    const query = document.getElementById('task-input').value.trim()
+    if (!query) { document.getElementById('task-input').focus(); return }
+
+    const btn = document.getElementById('search-btn')
+    btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Searching…'
+    btn.disabled = true
+
+    document.getElementById('empty-state').style.display  = 'none'
+    document.getElementById('results-wrap').style.display = 'none'
+    selectedCap = null; setRunBtn(false)
+
+    termLog(`zero search "${query}"`, 'cmd')
+    termLog('Scanning Zero registry…', 'info')
+
+    try {
+      const res  = await fetch('/api/search', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ query }) })
+      const data = await res.json()
+      capabilities = (data.ok && data.capabilities?.length) ? data.capabilities : mockCaps()
+    } catch { capabilities = mockCaps() }
+
+    termLog(`Found ${capabilities.length} capabilities.`, 'success')
+    renderResults()
+    btn.textContent = 'Find Capability'; btn.disabled = false
+  }
+
+  function mockCaps() {
+    return [
+      { position:1, name:'Weather API',    price:0.005, priceDisplay:'0.005 USDC/call', rating:'5.0', status:'healthy', description:'Current weather by location' },
+      { position:2, name:'Translator Pro', price:0.001, priceDisplay:'0.001 USDC/call', rating:'4.8', status:'healthy', description:'Translate text between 100+ languages' },
+    ]
+  }
+
+  function renderResults() {
+    const tbody = document.getElementById('results-tbody')
+    tbody.innerHTML = ''
+    document.getElementById('result-count').textContent = capabilities.length
+    capabilities.forEach(cap => {
+      const sc = { healthy:'#22c55e', stable:'#f59e0b', degraded:'#ef4444' }[cap.status] || '#555'
+      const tr = document.createElement('tr')
+      tr.className = 'cap-row'
+      tr.dataset.pos = cap.position
+      tr.tabIndex = 0
+      tr.setAttribute('role','row')
+      tr.setAttribute('aria-label',`${cap.name}, ${cap.description}, ${cap.rating} stars, ${cap.priceDisplay}`)
+      tr.innerHTML = `
+        <td role="gridcell">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="dot" style="background:${sc};box-shadow:0 0 5px ${sc}" aria-label="${cap.status}"></span>
+            <span class="cap-name">${esc(cap.name)}</span>
+          </div>
+        </td>
+        <td class="cap-desc" role="gridcell">${esc(cap.description)}</td>
+        <td class="cap-rating" role="gridcell">${esc(cap.rating)} ★</td>
+        <td class="cap-cost" role="gridcell">${esc(cap.priceDisplay)}</td>
+        <td role="gridcell" id="badge-${cap.position}"></td>
+      `
+      tr.addEventListener('click', () => doInspect(cap))
+      tr.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' ') { e.preventDefault(); doInspect(cap) } })
+      tbody.appendChild(tr)
     })
+    document.getElementById('results-wrap').style.display = 'block'
+  }
 
-    function updateMaxPay(v) {
-      const label = document.getElementById('max-pay-label')
-      label.textContent = parseFloat(v).toFixed(2) + ' USDC'
-      document.getElementById('max-pay-slider').setAttribute('aria-valuenow', v)
+  /* ── Inspect ─────────────────────────────────────────────── */
+  async function doInspect(cap) {
+    selectedCap = cap
+    capabilities.forEach(c => {
+      const b = document.getElementById(`badge-${c.position}`)
+      if (b) b.innerHTML = ''
+    })
+    document.querySelectorAll('.cap-row').forEach(r => { r.classList.remove('selected'); r.removeAttribute('aria-selected') })
+    const row   = document.querySelector(`.cap-row[data-pos="${cap.position}"]`)
+    const badge = document.getElementById(`badge-${cap.position}`)
+    if (row)   { row.classList.add('selected'); row.setAttribute('aria-selected','true') }
+    if (badge) badge.innerHTML = '<span class="badge-sel">Selected</span>'
+
+    document.getElementById('schema-empty').style.display   = 'none'
+    document.getElementById('schema-content').style.display = 'block'
+    document.getElementById('schema-code').textContent      = 'Loading…'
+    document.getElementById('request-body').value           = ''
+
+    termLog(`zero get ${cap.position} --formatted`, 'cmd')
+    termLog('Fetching capability schema…', 'info')
+
+    try {
+      const res  = await fetch('/api/get', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ identifier: cap.position }) })
+      detailData = await res.json()
+    } catch { detailData = { url: null, bodySchema: { prompt:'string' }, price: cap.price } }
+
+    const schemaObj = {
+      name:      cap.name,
+      pricing:   { costPerCall: cap.price },
+      bodySchema: detailData.bodySchema || { prompt:'string' },
+      endpoint:  detailData.url || 'https://api.zero.xyz/…',
+      status:    cap.status,
     }
+    document.getElementById('schema-code').textContent = JSON.stringify(schemaObj, null, 2)
 
-    // ── Wallet ─────────────────────────────────────────────
-    async function pollWallet() {
-      try {
-        const res  = await fetch('/api/balance')
-        const data = await res.json()
-        const bal  = data.balance ?? 0
-        const disp = document.getElementById('balance-display')
-        disp.textContent = bal.toFixed(2) + ' USDC'
-        disp.setAttribute('aria-label', `Wallet balance: ${bal.toFixed(2)} USDC`)
-        const dot   = document.getElementById('wallet-dot')
-        const label = document.getElementById('wallet-label')
-        if (bal > 0) {
-          dot.className = 'dot dot-healthy'
-          label.textContent = 'Funded · Ready'; label.style.color = '#22c55e'
-        } else {
-          dot.className = 'dot dot-degraded'
-          label.textContent = 'No funds'; label.style.color = '#ef4444'
-        }
-      } catch {}
-    }
-
-    // ── Terminal ───────────────────────────────────────────
-    const TERM_COLORS = { info:'#89b4fa', success:'#a6e3a1', pay:'#f9e2af', cmd:'#00b4d8', error:'#f38ba8' }
-    function termLog(text, type = 'info') {
-      const terminal = document.getElementById('terminal')
-      const line = document.createElement('div')
-      line.className = 'term-line fadein'
-      line.setAttribute('role', 'log')
-      line.innerHTML = `<span aria-hidden="true" style="color:${TERM_COLORS[type]||'#555'}; margin-right:8px;">›</span><span style="color:${TERM_COLORS[type]||'#cdd6f4'}">${escHtml(text)}</span>`
-      terminal.appendChild(line)
-      terminal.scrollTop = terminal.scrollHeight
-    }
-    function escHtml(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    }
-
-    // ── Search ─────────────────────────────────────────────
-    async function doSearch() {
-      const query = document.getElementById('task-input').value.trim()
-      if (!query) {
-        document.getElementById('task-input').focus()
-        return
-      }
-      const btn = document.getElementById('search-btn')
-      btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Searching…'
-      btn.disabled = true; btn.setAttribute('aria-busy', 'true')
-      document.getElementById('empty-state').style.display  = 'none'
-      document.getElementById('results-wrap').style.display = 'none'
-      selectedCap = null
-      setRunBtn(false)
-
-      termLog(`zero search "${query}"`, 'cmd')
-      termLog('Scanning Zero registry…', 'info')
-
-      try {
-        const res  = await fetch('/api/search', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ query }) })
-        const data = await res.json()
-        capabilities = (data.ok && data.capabilities?.length > 0) ? data.capabilities : mockCaps()
-      } catch { capabilities = mockCaps() }
-
-      termLog(`Found ${capabilities.length} capabilities.`, 'success')
-      renderResults()
-      btn.innerHTML = 'Find Capability'; btn.disabled = false; btn.setAttribute('aria-busy', 'false')
-    }
-
-    function mockCaps() {
-      return [
-        { position:1, name:'Weather API', price:0.005, priceDisplay:'0.005 USDC/call', rating:'5.0', status:'healthy', description:'Current weather by location' },
-        { position:2, name:'Translator Pro', price:0.001, priceDisplay:'0.001 USDC/call', rating:'4.8', status:'healthy', description:'Translate text between 100+ languages' },
-      ]
-    }
-
-    function renderResults() {
-      const tbody = document.getElementById('results-tbody')
-      tbody.innerHTML = ''
-      document.getElementById('result-count').textContent = capabilities.length
-      capabilities.forEach((cap, i) => {
-        const sc = STATUS_COLOR[cap.status] || '#555'
-        const tr = document.createElement('tr')
-        tr.className = 'cap-row'
-        tr.dataset.pos = cap.position
-        tr.setAttribute('tabindex', '0')
-        tr.setAttribute('role', 'row')
-        tr.setAttribute('aria-label', `${cap.name}, ${cap.description}, ${cap.rating} stars, ${cap.priceDisplay}. Press Enter to inspect.`)
-        tr.innerHTML = `
-          <td role="gridcell">
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="dot" style="background:${sc};box-shadow:0 0 5px ${sc}" aria-label="${cap.status}"></span>
-              <span class="cap-name">${escHtml(cap.name)}</span>
-            </div>
-          </td>
-          <td class="cap-desc" role="gridcell">${escHtml(cap.description)}</td>
-          <td class="rating-val" role="gridcell" aria-label="${cap.rating} stars">${escHtml(cap.rating)} ★</td>
-          <td class="cost-val" role="gridcell" style="white-space:nowrap">${escHtml(cap.priceDisplay)}</td>
-          <td role="gridcell" id="badge-${cap.position}"></td>
-        `
-        tr.addEventListener('click', () => doInspect(cap))
-        tr.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); doInspect(cap) } })
-        tbody.appendChild(tr)
+    const task   = document.getElementById('task-input').value.trim()
+    const body   = {}
+    const schema = detailData.bodySchema
+    const nl     = cap.name.toLowerCase()
+    if (schema && typeof schema === 'object') {
+      Object.keys(schema).forEach(k => {
+        if (['prompt','query','q','text','input'].includes(k)) body[k] = task
+        else if (k === 'model') body[k] = nl.includes('flux') ? 'flux-schnell' : nl.includes('grok') ? 'grok-image' : ''
+        else body[k] = ''
       })
-      document.getElementById('results-wrap').style.display = 'block'
+    } else { body.prompt = task }
+    document.getElementById('request-body').value = JSON.stringify(body, null, 2)
+
+    termLog(`Schema loaded. Cost: ${cap.priceDisplay}`, 'success')
+    setRunBtn(true)
+  }
+
+  function setRunBtn(on) {
+    const btn = document.getElementById('run-btn')
+    btn.disabled = !on
+    btn.setAttribute('aria-disabled', String(!on))
+  }
+
+  /* ── Run ─────────────────────────────────────────────────── */
+  async function doRun() {
+    if (!selectedCap) return
+    const btn = document.getElementById('run-btn')
+    btn.disabled = true; btn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Running…'
+
+    const maxPay = parseFloat(document.getElementById('max-pay-slider').value) || 0.10
+    termLog(`zero fetch ${detailData?.url || '[endpoint]'} --json`, 'cmd')
+    setTimeout(() => termLog(`x402 challenge detected (${selectedCap.priceDisplay}).`, 'info'), 380)
+    setTimeout(() => termLog(`Auto-paying ${selectedCap.priceDisplay}… Paid. Result stream:`, 'pay'), 980)
+
+    let body = {}
+    try { body = JSON.parse(document.getElementById('request-body').value || '{}') } catch {}
+
+    try {
+      const res  = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: detailData?.url, data: body, maxPay }) })
+      const data = await res.json()
+      currentRunId = data.runId || null
+      renderResult(data.ok ? data.result : mockResult())
+    } catch { renderResult(mockResult()) }
+
+    btn.disabled = false; btn.textContent = 'RUN CAPABILITY'
+  }
+
+  function mockResult() {
+    return { route:'LA → Chicago', rate:'$2,847 / 40ft container', transit:'4–6 days', updated:'2026-05-27T19:00:00Z' }
+  }
+
+  function renderResult(result) {
+    termLog('Payload received. ✓', 'success')
+    pollWallet()
+
+    const t     = document.getElementById('terminal')
+    const block = document.createElement('div')
+    block.className = 'fadein'
+    block.setAttribute('role','region')
+    block.setAttribute('aria-label','Result')
+    block.style.cssText = 'margin-top:12px;padding:14px;background:rgba(0,180,216,0.04);border-radius:8px;border:1px solid rgba(0,180,216,0.12);'
+
+    const imgUrl = result?.images?.[0]?.url || result?.url || result?.image_url || result?.imageUrl
+    const b64    = result?.b64_json || result?.image
+
+    if (imgUrl && /\.(jpg|jpeg|png|webp|gif)/i.test(imgUrl)) {
+      block.innerHTML = `<img src="${esc(imgUrl)}" style="max-width:100%;border-radius:8px;" alt="Generated result" />`
+    } else if (b64 && typeof b64 === 'string') {
+      const src = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`
+      block.innerHTML = `<img src="${src}" style="max-width:100%;border-radius:8px;" alt="Generated result" />`
+    } else {
+      block.style.fontFamily = "'Courier New',monospace"
+      block.style.fontSize   = '13px'
+      block.style.color      = '#a6e3a1'
+      block.style.lineHeight = '1.8'
+      const rows = Object.entries(result || {}).map(([k,v]) =>
+        `<div><span style="color:#525870;display:inline-block;width:90px;">${esc(k)}</span>${esc(typeof v==='object'?JSON.stringify(v):String(v))}</div>`
+      ).join('')
+      block.innerHTML = rows || `<pre style="color:#888;white-space:pre-wrap">${esc(JSON.stringify(result,null,2))}</pre>`
     }
 
-    // ── Inspect ────────────────────────────────────────────
-    async function doInspect(cap) {
-      selectedCap = cap
-      capabilities.forEach(c => { const el = document.getElementById(`badge-${c.position}`); if (el) el.innerHTML = '' })
-      const badge = document.getElementById(`badge-${cap.position}`)
-      if (badge) badge.innerHTML = '<span class="badge-selected" aria-label="Selected">Selected</span>'
-      document.querySelectorAll('.cap-row').forEach(r => { r.classList.remove('selected'); r.setAttribute('aria-selected', 'false') })
-      const row = document.querySelector(`.cap-row[data-pos="${cap.position}"]`)
-      if (row) { row.classList.add('selected'); row.setAttribute('aria-selected', 'true') }
+    t.appendChild(block)
+    t.scrollTop = t.scrollHeight
+    document.getElementById('review-section').style.display = 'block'
+    document.getElementById('review-confirm').style.display = 'none'
+    document.getElementById('review-btn').disabled = false
+  }
 
-      document.getElementById('schema-empty').style.display   = 'none'
-      document.getElementById('schema-content').style.display = 'block'
-      document.getElementById('schema-code').textContent      = 'Loading…'
-      document.getElementById('request-body').value           = ''
-
-      termLog(`zero get ${cap.position} --formatted`, 'cmd')
-      termLog('Fetching capability schema…', 'info')
-
-      try {
-        const res  = await fetch('/api/get', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ identifier: cap.position }) })
-        detailData = await res.json()
-      } catch { detailData = { url: null, bodySchema: { prompt:'string' }, price: cap.price } }
-
-      const schemaObj = {
-        name: cap.name,
-        pricing: { costPerCall: cap.price },
-        bodySchema: detailData.bodySchema || { prompt:'string' },
-        endpoint: detailData.url || 'https://api.zero.xyz/…',
-        status: cap.status,
+  /* ── Review ──────────────────────────────────────────────── */
+  async function doReview() {
+    if (!reviewAccuracy || !reviewValue) {
+      termLog('Please rate both accuracy and value first.', 'error'); return
+    }
+    try {
+      if (currentRunId) {
+        await fetch('/api/review', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ runId: currentRunId, accuracy: reviewAccuracy, value: reviewValue }) })
       }
-      document.getElementById('schema-code').textContent = JSON.stringify(schemaObj, null, 2)
+    } catch {}
+    termLog(`Review submitted — accuracy:${reviewAccuracy} value:${reviewValue}`, 'success')
+    document.getElementById('review-confirm').style.display = 'block'
+    document.getElementById('review-btn').disabled = true
+  }
 
-      const task = document.getElementById('task-input').value.trim()
-      const body = {}
-      const schema = detailData.bodySchema
-      const nl = cap.name.toLowerCase()
-      if (schema && typeof schema === 'object') {
-        Object.keys(schema).forEach(k => {
-          if (['prompt','query','q','text','input'].includes(k)) body[k] = task
-          else if (k === 'model') body[k] = nl.includes('flux') ? 'flux-schnell' : nl.includes('grok') ? 'grok-image' : ''
-          else body[k] = ''
-        })
-      } else { body.prompt = task }
-      document.getElementById('request-body').value = JSON.stringify(body, null, 2)
-
-      termLog(`Schema loaded. Cost: ${cap.priceDisplay}`, 'success')
-      setRunBtn(true)
+  /* ── Stars ───────────────────────────────────────────────── */
+  function initStars(id, cb) {
+    const el = document.getElementById(id)
+    el.innerHTML = ''
+    for (let i = 1; i <= 5; i++) {
+      const s = document.createElement('button')
+      s.textContent = '★'; s.className = 'star'
+      s.type = 'button'
+      s.setAttribute('aria-label', `${i} star${i>1?'s':''}`)
+      s.setAttribute('role','radio')
+      s.setAttribute('aria-checked','false')
+      s.dataset.val = i
+      s.addEventListener('click', () => { cb(i); termLog((id.includes('accuracy')?'Accuracy':'Value')+` rated ${i}/5`, 'info') })
+      el.appendChild(s)
     }
-
-    function setRunBtn(enabled) {
-      const btn = document.getElementById('run-btn')
-      btn.disabled = !enabled
-      btn.setAttribute('aria-disabled', String(!enabled))
-    }
-
-    // ── Run ────────────────────────────────────────────────
-    async function doRun() {
-      if (!selectedCap) return
-      const runBtn = document.getElementById('run-btn')
-      runBtn.disabled = true; runBtn.setAttribute('aria-busy', 'true')
-      runBtn.innerHTML = '<span class="spinner" aria-hidden="true"></span> Running…'
-
-      const maxPay = parseFloat(document.getElementById('max-pay-slider').value) || 0.10
-      termLog(`zero fetch ${detailData?.url || '[endpoint]'} --json`, 'cmd')
-      setTimeout(() => termLog(`x402 challenge detected (${selectedCap.priceDisplay}).`, 'info'), 400)
-      setTimeout(() => termLog(`Auto-paying ${selectedCap.priceDisplay}… Paid. Result stream:`, 'pay'), 1000)
-
-      let body = {}
-      try { body = JSON.parse(document.getElementById('request-body').value || '{}') } catch {}
-
-      try {
-        const res  = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: detailData?.url, data: body, maxPay }) })
-        const data = await res.json()
-        currentRunId = data.runId || null
-        renderResult(data.ok ? data.result : mockResult())
-      } catch { renderResult(mockResult()) }
-
-      runBtn.disabled = false; runBtn.setAttribute('aria-busy', 'false')
-      runBtn.textContent = 'RUN CAPABILITY'
-    }
-
-    function mockResult() {
-      return { route:'LA → Chicago', rate:'$2,847 / 40ft container', transit:'4–6 days', updated:'2026-05-27T19:00:00Z' }
-    }
-
-    function renderResult(result) {
-      termLog('Payload received. ✓', 'success')
-      pollWallet()
-
-      const terminal = document.getElementById('terminal')
-      const block = document.createElement('div')
-      block.setAttribute('role', 'region'); block.setAttribute('aria-label', 'Result')
-      block.style.cssText = 'margin-top:12px; padding:14px; background:var(--result-bg); border-radius:8px; border:1px solid var(--result-bord);'
-
-      const imgUrl = result?.images?.[0]?.url || result?.url || result?.image_url || result?.imageUrl
-      const b64    = result?.b64_json || result?.image
-
-      if (imgUrl && /\.(jpg|jpeg|png|webp|gif)/i.test(imgUrl)) {
-        block.innerHTML = `<img src="${escHtml(imgUrl)}" style="max-width:100%;border-radius:8px;" alt="Generated result image" />`
-      } else if (b64 && typeof b64 === 'string') {
-        const src = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`
-        block.innerHTML = `<img src="${src}" style="max-width:100%;border-radius:8px;" alt="Generated result image" />`
-      } else {
-        block.style.fontFamily = "'Courier New', monospace"
-        block.style.fontSize   = '13px'; block.style.color = '#a6e3a1'; block.style.lineHeight = '1.8'
-        const rows = Object.entries(result || {}).map(([k,v]) =>
-          `<div><span style="color:#555;display:inline-block;width:90px">${escHtml(k)}</span>${escHtml(typeof v === 'object' ? JSON.stringify(v) : String(v))}</div>`
-        ).join('')
-        block.innerHTML = rows || `<pre style="color:#888;white-space:pre-wrap">${escHtml(JSON.stringify(result,null,2))}</pre>`
-      }
-      terminal.appendChild(block)
-      terminal.scrollTop = terminal.scrollHeight
-      document.getElementById('review-section').style.display = 'block'
-      document.getElementById('review-confirm').style.display  = 'none'
-      document.getElementById('review-btn').disabled = false
-    }
-
-    // ── Review ─────────────────────────────────────────────
-    async function doReview() {
-      if (!reviewAccuracy || !reviewValue) {
-        termLog('Please rate both accuracy and value before submitting.', 'error'); return
-      }
-      try {
-        if (currentRunId) {
-          await fetch('/api/review', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ runId: currentRunId, accuracy: reviewAccuracy, value: reviewValue }) })
-        }
-      } catch {}
-      termLog(`Review submitted — accuracy:${reviewAccuracy} value:${reviewValue}`, 'success')
-      document.getElementById('review-confirm').style.display = 'block'
-      document.getElementById('review-btn').disabled = true
-    }
-
-    // ── Stars ──────────────────────────────────────────────
-    function initStars(containerId, cb) {
-      const el = document.getElementById(containerId)
-      el.innerHTML = ''
-      for (let i = 1; i <= 5; i++) {
-        const s = document.createElement('button')
-        s.textContent = '★'; s.className = 'star'
-        s.setAttribute('type', 'button')
-        s.setAttribute('aria-label', `${i} star${i > 1 ? 's' : ''}`)
-        s.setAttribute('role', 'radio'); s.setAttribute('aria-checked', 'false')
-        s.dataset.val = i
-        s.addEventListener('click', () => { cb(i); announceRating(containerId, i) })
-        s.style.background = 'none'; s.style.border = 'none'; s.style.padding = '2px'
-        el.appendChild(s)
-      }
-    }
-    function renderStars(id, val) {
-      document.querySelectorAll(`#${id} .star`).forEach(s => {
-        const n = parseInt(s.dataset.val)
-        s.classList.toggle('lit', n <= val)
-        s.setAttribute('aria-checked', n === val ? 'true' : 'false')
-      })
-    }
-    function announceRating(id, val) {
-      const label = id.includes('accuracy') ? 'Accuracy' : 'Value'
-      termLog(`${label} rated ${val}/5`, 'info')
-    }
-  </script>
+  }
+  function renderStars(id, val) {
+    document.querySelectorAll(`#${id} .star`).forEach(s => {
+      const n = +s.dataset.val
+      s.classList.toggle('lit', n <= val)
+      s.setAttribute('aria-checked', n === val ? 'true' : 'false')
+    })
+  }
+</script>
 </body>
 </html>
