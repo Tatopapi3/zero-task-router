@@ -46,22 +46,39 @@ function Stars({ val, onChange, label }: { val:number; onChange:(n:number)=>void
   )
 }
 
+/* ── Demo seed ─────────────────────────────────────────────────── */
+const DEMO_QUERY  = 'Get current weather in New York and translate to Spanish'
+const DEMO_CAP    = MOCK_CAPS[0]
+const DEMO_DETAIL: Detail = {
+  url: 'https://x402-gateway-production.up.railway.app/api/weather',
+  bodySchema: { location: 'string', units: 'string' },
+  price: 0.005, raw: '',
+}
+const DEMO_BODY   = JSON.stringify({ location: 'New York', units: 'metric' }, null, 2)
+const DEMO_LOG: LogLine[] = [
+  { id:1, text: 'zero search "Get current weather in New York and translate to Spanish"', type:'cmd' },
+  { id:2, text: 'Scanning Zero registry…',                    type:'info'    },
+  { id:3, text: 'Found 2 capabilities.',                      type:'success' },
+  { id:4, text: 'zero get 1 --formatted',                     type:'cmd'     },
+  { id:5, text: 'Schema loaded. Cost: 0.005 USDC/call',       type:'success' },
+]
+
 /* ── Main ───────────────────────────────────────────────────────── */
 export default function Home() {
   const [dark,        setDark]        = useState(true)
-  const [query,       setQuery]       = useState('')
+  const [query,       setQuery]       = useState(DEMO_QUERY)
   const [searching,   setSearching]   = useState(false)
-  const [caps,        setCaps]        = useState<Capability[]>([])
-  const [selected,    setSelected]    = useState<Capability | null>(null)
-  const [detail,      setDetail]      = useState<Detail | null>(null)
-  const [reqBody,     setReqBody]     = useState('')
+  const [caps,        setCaps]        = useState<Capability[]>(MOCK_CAPS)
+  const [selected,    setSelected]    = useState<Capability | null>(DEMO_CAP)
+  const [detail,      setDetail]      = useState<Detail | null>(DEMO_DETAIL)
+  const [reqBody,     setReqBody]     = useState(DEMO_BODY)
   const [running,     setRunning]     = useState(false)
   const [result,      setResult]      = useState<unknown>(null)
   const [runId,       setRunId]       = useState<string|null>(null)
   const [balance,     setBalance]     = useState<number|null>(null)
   const [maxPay,      setMaxPay]      = useState(0.05)
-  const [log,         setLog]         = useState<LogLine[]>([])
-  const [logN,        setLogN]        = useState(0)
+  const [log,         setLog]         = useState<LogLine[]>(DEMO_LOG)
+  const [logN,        setLogN]        = useState(DEMO_LOG.length)
   const [accuracy,    setAccuracy]    = useState(0)
   const [rateVal,     setRateVal]     = useState(0)
   const [reviewed,    setReviewed]    = useState(false)
