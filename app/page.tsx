@@ -192,8 +192,8 @@ export default function Home() {
   function renderResult() {
     if (!result) return null
     const r = result as Record<string, unknown>
-    const imgUrl = r?.images?.[0] && typeof (r.images as unknown[])[0] === 'object'
-      ? ((r.images as Record<string,string>[])[0]?.url) : (r?.url ?? r?.image_url ?? r?.imageUrl)
+    const imgs = r?.images as Record<string,string>[] | undefined
+    const imgUrl: unknown = (imgs?.[0]?.url) ?? r?.url ?? r?.image_url ?? r?.imageUrl
     const b64 = r?.b64_json ?? r?.image
     if (imgUrl && typeof imgUrl === 'string' && /\.(jpg|jpeg|png|webp|gif)/i.test(imgUrl)) {
       return <img src={imgUrl} alt="result" style={{ maxWidth:'100%', borderRadius:8 }} />
