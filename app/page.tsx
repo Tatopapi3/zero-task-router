@@ -494,10 +494,10 @@ export default function Home() {
                     <span style={{ color:LOG_COLORS[entry.type] }}>{entry.text}</span>
                   </div>
                 ))}
-                {result && (
+                {result !== null && (
                   <div className="fadein" style={{ marginTop:12, padding:14, borderRadius:8,
                     background:'rgba(0,180,216,0.04)', border:'1px solid rgba(0,180,216,0.12)' }}>
-                    {renderResult()}
+                    {renderResult() ?? null}
                   </div>
                 )}
               </div>
