@@ -59,7 +59,6 @@ export default function Home() {
   const [balance,     setBalance]     = useState<number|null>(null)
   const [maxPay,      setMaxPay]      = useState(0.05)
   const [log,         setLog]         = useState<LogLine[]>([])
-  const [logN,        setLogN]        = useState(0)
   const [accuracy,    setAccuracy]    = useState(0)
   const [rateVal,     setRateVal]     = useState(0)
   const [reviewed,    setReviewed]    = useState(false)
@@ -97,11 +96,7 @@ export default function Home() {
   /* ── Log ────────────────────────────────────────────────────── */
   const addLog = useCallback((text: string, type: LogType = 'info', delay = 0) => {
     setTimeout(() => {
-      setLogN(n => {
-        const id = n + 1
-        setLog(prev => [...prev.slice(-60), { id, text, type }])
-        return id
-      })
+      setLog(prev => [...prev.slice(-60), { id: Date.now() + Math.random(), text, type }])
     }, delay)
   }, [])
 
