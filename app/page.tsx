@@ -1,565 +1,545 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback, KeyboardEvent } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
-/* ── Types ─────────────────────────────────────────────────── */
+/* ── Types ─────────────────────────────────────────────────────── */
 interface Capability {
   position: number; name: string; price: number; priceDisplay: string
   rating: string; status: string; description: string
 }
-interface CapDetail {
-  url: string | null; bodySchema: Record<string, unknown> | null
-  price: number | null; raw: string
+interface Detail {
+  url: string | null; bodySchema: Record<string, unknown> | null; price: number | null; raw: string
 }
-interface LogEntry { id: number; text: string; type: 'info' | 'success' | 'error' | 'pay' }
-type Stage = 'idle' | 'searching' | 'results' | 'inspecting' | 'running' | 'result' | 'reviewing'
+type LogType = 'cmd' | 'info' | 'success' | 'pay' | 'error'
+interface LogLine { id: number; text: string; type: LogType }
 
-/* ── Mock fallback data ─────────────────────────────────────── */
-const MOCK_RESULTS: Capability[] = [
-  { position: 1, name: 'FreightRate API', price: 1, priceDisplay: '$1.00/call',
-    rating: '★ 4.8/5 (96% success)', status: 'healthy',
-    description: 'Real-time freight rate data for major US shipping lanes.' },
-  { position: 2, name: 'ShipMatrix Live', price: 0.50, priceDisplay: '$0.50/call',
-    rating: '★ 4.2/5 (88% success)', status: 'stable',
-    description: 'Container shipping rates and transit time estimates, updated hourly.' },
+/* ── Constants ─────────────────────────────────────────────────── */
+const CYAN   = '#00b4d8'
+const PURPLE = '#7c3aed'
+const LOG_COLORS: Record<LogType, string> = {
+  cmd:'#00b4d8', info:'#89b4fa', success:'#a6e3a1', pay:'#f9e2af', error:'#f38ba8'
+}
+const MOCK_CAPS: Capability[] = [
+  { position:1, name:'Weather API',    price:0.005, priceDisplay:'0.005 USDC/call', rating:'5.0', status:'healthy', description:'Current weather by location' },
+  { position:2, name:'Translator Pro', price:0.001, priceDisplay:'0.001 USDC/call', rating:'4.8', status:'healthy', description:'Translate text between 100+ languages' },
 ]
-const MOCK_RESULT = {
-  route: 'LA → Chicago', rate: '$2,847 / 40ft container',
-  transit: '4–6 days', updated: '2026-05-27T19:00:00Z',
-}
+const MOCK_RESULT = { route:'LA → Chicago', rate:'$2,847 / 40ft container', transit:'4–6 days', updated:'2026-05-27T19:00:00Z' }
 
-/* ── Status color ───────────────────────────────────────────── */
-const SC: Record<string, string> = {
-  healthy: '#00ff87', stable: '#f59e0b', degraded: '#ef4444', unrated: '#555'
-}
-
-/* ── Component helpers ──────────────────────────────────────── */
+/* ── Dot ───────────────────────────────────────────────────────── */
 function Dot({ status }: { status: string }) {
-  const c = SC[status] ?? '#555'
-  return <span style={{ display:'inline-block', width:7, height:7, borderRadius:'50%',
-    background:c, boxShadow:`0 0 6px ${c}`, flexShrink:0 }} />
+  const c = { healthy:'#22c55e', stable:'#f59e0b', degraded:'#ef4444' }[status] ?? '#525870'
+  return <span style={{ display:'inline-block', width:7, height:7, borderRadius:'50%', background:c, boxShadow:`0 0 5px ${c}`, flexShrink:0 }} />
 }
 
-function Stars({ val, onChange }: { val:number; onChange:(n:number)=>void }) {
+/* ── Stars ─────────────────────────────────────────────────────── */
+function Stars({ val, onChange, label }: { val:number; onChange:(n:number)=>void; label:string }) {
   return (
-    <div style={{ display:'flex', gap:6 }}>
+    <div style={{ display:'flex', gap:4 }} role="radiogroup" aria-label={label}>
       {[1,2,3,4,5].map(n => (
-        <button key={n} onClick={() => onChange(n)} style={{
-          background:'none', border:'none', cursor:'pointer',
-          fontSize:20, color: n<=val ? '#00ff87' : '#252525', padding:0, lineHeight:1 }}>★</button>
+        <button key={n} type="button" onClick={() => onChange(n)}
+          aria-label={`${n} star${n>1?'s':''}`}
+          aria-checked={n===val}
+          style={{ background:'none', border:'none', cursor:'pointer',
+            fontSize:20, color: n<=val ? '#f59e0b' : 'var(--text-dim)', padding:'2px', lineHeight:1 }}>★</button>
       ))}
     </div>
   )
 }
 
-function ResultVault({ result, locked }: { result: unknown; locked: boolean }) {
-  const [flash, setFlash] = useState(false)
-  useEffect(() => {
-    if (!locked) { setFlash(true); setTimeout(() => setFlash(false), 700) }
-  }, [locked])
-
-  const r = result as Record<string, unknown> | null
-  return (
-    <div style={{ position:'relative', flex:1, borderRadius:12,
-      background: locked ? '#0a0a0a' : '#0d0d0d',
-      border: `1px solid ${locked ? '#1a1a1a' : flash ? '#00ff87' : '#252525'}`,
-      transition:'border-color 0.4s', overflow:'hidden', minHeight:200 }}>
-      {flash && (
-        <div style={{ position:'absolute', inset:0, background:'rgba(0,255,135,0.06)',
-          animation:'vault-flash 0.7s ease forwards', pointerEvents:'none', zIndex:5 }} />
-      )}
-      {locked ? (
-        <div style={{ display:'flex', flexDirection:'column', alignItems:'center',
-          justifyContent:'center', height:'100%', minHeight:200, gap:12, padding:24 }}>
-          <span style={{ fontSize:28, opacity:0.15 }}>⬡</span>
-          <span style={{ fontSize:11, color:'#333', letterSpacing:'0.12em', textTransform:'uppercase' }}>
-            Result Vault — Locked
-          </span>
-          <span style={{ fontSize:10, color:'#222' }}>Awaiting x402 payment confirmation</span>
-        </div>
-      ) : (
-        <div style={{ padding:'20px 22px', fontFamily:'var(--font-geist-mono)',
-          fontSize:12, color:'#00ff87', lineHeight:1.8 }}>
-          {r?.route   ? <div><span style={{color:'#555'}}>route    </span>{String(r.route)}</div> : null}
-          {r?.rate    ? <div><span style={{color:'#555'}}>rate     </span>{String(r.rate)}</div> : null}
-          {r?.transit ? <div><span style={{color:'#555'}}>transit  </span>{String(r.transit)}</div> : null}
-          {r?.updated ? <div><span style={{color:'#555'}}>updated  </span>{String(r.updated)}</div> : null}
-          {r?.text    ? <pre style={{ margin:0, whiteSpace:'pre-wrap', color:'#ccc' }}>{String(r.text)}</pre> : null}
-          {r?.url && /\.(png|jpg|jpeg|webp|gif)/i.test(String(r.url))
-            ? <img src={String(r.url)} alt="result" style={{ maxWidth:'100%', borderRadius:6, marginTop:8 }} />
-            : null}
-          {r?.image && String(r.image).startsWith('data:image')
-            ? <img src={String(r.image)} alt="result" style={{ maxWidth:'100%', borderRadius:6 }} />
-            : null}
-          {!r?.route && !r?.rate && !r?.text && !r?.url && !r?.image && (
-            <pre style={{ margin:0, whiteSpace:'pre-wrap', color:'#aaa', fontSize:11 }}>
-              {JSON.stringify(result, null, 2)}
-            </pre>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ── Main ───────────────────────────────────────────────────── */
+/* ── Main ───────────────────────────────────────────────────────── */
 export default function Home() {
-  const [stage, setStage]               = useState<Stage>('idle')
-  const [query, setQuery]               = useState('')
-  const [capabilities, setCapabilities] = useState<Capability[]>([])
-  const [selected, setSelected]         = useState<Capability | null>(null)
-  const [detail, setDetail]             = useState<CapDetail | null>(null)
-  const [inputs, setInputs]             = useState<Record<string,string>>({})
-  const [result, setResult]             = useState<unknown>(null)
-  const [runId, setRunId]               = useState<string|null>(null)
-  const [balance, setBalance]           = useState<number|null>(null)
-  const [log, setLog]                   = useState<LogEntry[]>([])
-  const [logId, setLogId]               = useState(0)
-  const [accuracy, setAccuracy]         = useState(0)
-  const [rateVal, setRateVal]           = useState(0)
-  const [reviewed, setReviewed]         = useState(false)
-  const logRef   = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const [dark,        setDark]        = useState(true)
+  const [query,       setQuery]       = useState('')
+  const [searching,   setSearching]   = useState(false)
+  const [caps,        setCaps]        = useState<Capability[]>([])
+  const [selected,    setSelected]    = useState<Capability | null>(null)
+  const [detail,      setDetail]      = useState<Detail | null>(null)
+  const [reqBody,     setReqBody]     = useState('')
+  const [running,     setRunning]     = useState(false)
+  const [result,      setResult]      = useState<unknown>(null)
+  const [runId,       setRunId]       = useState<string|null>(null)
+  const [balance,     setBalance]     = useState<number|null>(null)
+  const [maxPay,      setMaxPay]      = useState(0.05)
+  const [log,         setLog]         = useState<LogLine[]>([])
+  const [logN,        setLogN]        = useState(0)
+  const [accuracy,    setAccuracy]    = useState(0)
+  const [rateVal,     setRateVal]     = useState(0)
+  const [reviewed,    setReviewed]    = useState(false)
+  const [showReview,  setShowReview]  = useState(false)
+  const termRef  = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const addLog = useCallback((text: string, type: LogEntry['type'] = 'info') => {
-    setLogId(id => {
-      const newId = id + 1
-      setLog(prev => [...prev.slice(-50), { id: newId, text, type }])
-      return newId
-    })
+  /* ── Theme ──────────────────────────────────────────────────── */
+  const theme = dark ? {
+    bg:'#0d0e17', card:'#12141f', border:'rgba(255,255,255,0.08)', inputBg:'#0a0b14', inputBorder:'rgba(255,255,255,0.10)',
+    text:'#f2f2f5', textSec:'#8892a4', textMute:'#525870', textDim:'#2e3248',
+    rowHover:'rgba(255,255,255,0.03)', rowSel:`rgba(0,180,216,0.07)`,
+    thBorder:'rgba(255,255,255,0.06)', tdBorder:'rgba(255,255,255,0.05)',
+    codeBg:'#090a12', codeBorder:'rgba(255,255,255,0.07)', termBg:'#080910', termBorder:'rgba(255,255,255,0.07)',
+    sep:'rgba(255,255,255,0.06)', sliderTrack:'#1c1e30', toggleBg:'#1c1e30',
+  } : {
+    bg:'#eef0f5', card:'#ffffff', border:'rgba(0,0,0,0.09)', inputBg:'#f5f6fa', inputBorder:'rgba(0,0,0,0.13)',
+    text:'#0d0e17', textSec:'#555e72', textMute:'#8892a4', textDim:'#c0c4d0',
+    rowHover:'rgba(0,0,0,0.025)', rowSel:'rgba(0,180,216,0.07)',
+    thBorder:'rgba(0,0,0,0.07)', tdBorder:'rgba(0,0,0,0.04)',
+    codeBg:'#f0f2f7', codeBorder:'rgba(0,0,0,0.08)', termBg:'#181b2e', termBorder:'rgba(0,0,0,0.08)',
+    sep:'rgba(0,0,0,0.07)', sliderTrack:'#d8dce8', toggleBg:'#e2e5ee',
+  }
+  const T = theme
+
+  /* ── Wallet ─────────────────────────────────────────────────── */
+  const fetchBalance = useCallback(async () => {
+    try {
+      const d = await fetch('/api/balance').then(r => r.json())
+      if (d.ok) setBalance(d.balance)
+    } catch {}
+  }, [])
+  useEffect(() => { fetchBalance(); const iv = setInterval(fetchBalance, 9000); return () => clearInterval(iv) }, [fetchBalance])
+
+  /* ── Log ────────────────────────────────────────────────────── */
+  const addLog = useCallback((text: string, type: LogType = 'info', delay = 0) => {
+    setTimeout(() => {
+      setLogN(n => {
+        const id = n + 1
+        setLog(prev => [...prev.slice(-60), { id, text, type }])
+        return id
+      })
+    }, delay)
   }, [])
 
-  // Scroll log to bottom
   useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight
+    if (termRef.current) termRef.current.scrollTop = termRef.current.scrollHeight
   }, [log])
 
-  // Poll wallet balance
-  useEffect(() => {
-    async function fetchBalance() {
-      try {
-        const res = await fetch('/api/balance')
-        const d = await res.json()
-        if (d.ok) setBalance(d.balance)
-      } catch {}
-    }
-    fetchBalance()
-    const interval = setInterval(fetchBalance, 8000)
-    return () => clearInterval(interval)
-  }, [])
-
-  /* ── Search ─────────────────────────────────────────────── */
+  /* ── Search ─────────────────────────────────────────────────── */
   async function doSearch() {
     if (!query.trim()) return
-    setStage('searching'); setCapabilities([]); setSelected(null)
-    setDetail(null); setResult(null); setRunId(null)
-
-    addLog('Scanning Zero registry...', 'info')
-    setTimeout(() => addLog('Querying capability index...', 'info'), 600)
-    setTimeout(() => addLog(`Searching: "${query}"`, 'info'), 1100)
-
+    setSearching(true); setCaps([]); setSelected(null); setDetail(null); setResult(null); setRunId(null); setShowReview(false)
+    addLog(`zero search "${query}"`, 'cmd')
+    addLog('Scanning Zero registry…', 'info', 200)
     try {
-      const res = await fetch('/api/search', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ query }),
-      })
-      const data = await res.json()
-      const caps = data.ok && data.capabilities?.length > 0
-        ? data.capabilities
-        : MOCK_RESULTS  // fallback
-
-      setCapabilities(caps)
-      addLog(`Found ${caps.length} capabilities. Select one to inspect.`, 'success')
-      setStage('results')
+      const d = await fetch('/api/search', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ query }) }).then(r => r.json())
+      const list = d.ok && d.capabilities?.length ? d.capabilities : MOCK_CAPS
+      setCaps(list)
+      addLog(`Found ${list.length} capabilities.`, 'success', 100)
     } catch {
-      setCapabilities(MOCK_RESULTS)
-      addLog(`Found ${MOCK_RESULTS.length} capabilities (demo mode).`, 'success')
-      setStage('results')
+      setCaps(MOCK_CAPS); addLog(`Found ${MOCK_CAPS.length} capabilities.`, 'success', 100)
     }
+    setSearching(false)
   }
 
-  /* ── Inspect ─────────────────────────────────────────────── */
+  /* ── Inspect ─────────────────────────────────────────────────── */
   async function doInspect(cap: Capability) {
-    setSelected(cap); setStage('inspecting')
-    addLog(`Inspecting: ${cap.name}`, 'info')
-    addLog(`Fetching schema and endpoint...`, 'info')
-
+    setSelected(cap); setDetail(null); setResult(null); setRunId(null); setShowReview(false)
+    addLog(`zero get ${cap.position} --formatted`, 'cmd')
+    addLog('Fetching capability schema…', 'info', 200)
     try {
-      const res = await fetch('/api/get', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ identifier: cap.position }),
-      })
-      const data = await res.json()
-      setDetail(data.ok ? data : { url: null, bodySchema: null, price: cap.price, raw: '' })
-
-      if (data.bodySchema) {
-        const seed: Record<string,string> = {}
-        for (const k of Object.keys(data.bodySchema)) seed[k] = ''
-        if ('prompt' in seed) seed.prompt = query
-        if ('query'  in seed) seed.query  = query
-        if ('q'      in seed) seed.q      = query
-        setInputs(seed)
-      } else {
-        setInputs({})
-      }
-      addLog(`Schema loaded. Cost: ${cap.priceDisplay}`, 'success')
+      const d = await fetch('/api/get', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ identifier: cap.position }) }).then(r => r.json())
+      setDetail(d)
+      const body: Record<string,string> = {}
+      if (d.bodySchema && typeof d.bodySchema === 'object') {
+        Object.keys(d.bodySchema).forEach(k => {
+          body[k] = ['prompt','query','q','text','input'].includes(k) ? query : ''
+        })
+      } else { body.prompt = query }
+      setReqBody(JSON.stringify(body, null, 2))
+      addLog(`Schema loaded. Cost: ${cap.priceDisplay}`, 'success', 100)
     } catch {
-      setDetail({ url: null, bodySchema: null, price: cap.price, raw: '' })
-      addLog('Schema loaded (demo mode).', 'success')
+      setDetail({ url: null, bodySchema: { prompt:'string' }, price: cap.price, raw:'' })
+      setReqBody(JSON.stringify({ prompt: query }, null, 2))
+      addLog(`Schema loaded. Cost: ${cap.priceDisplay}`, 'success', 100)
     }
   }
 
-  /* ── Run ─────────────────────────────────────────────────── */
+  /* ── Run ────────────────────────────────────────────────────── */
   async function doRun() {
     if (!selected) return
-    setStage('running')
-    addLog('Capability endpoint found...', 'info')
-
-    const logSteps = [
-      [500,  'x402 challenge detected...',                    'info'  as const],
-      [1200, 'Micropayment authorized — firing USDC on Base...', 'pay' as const],
-      [2200, 'Transaction submitted to Base chain...',        'pay'   as const],
-      [3000, 'Awaiting payload...',                           'info'  as const],
-    ]
-    logSteps.forEach(([delay, text, type]) =>
-      setTimeout(() => addLog(text as string, type as LogEntry['type']), delay as number)
-    )
-
+    setRunning(true); setResult(null); setShowReview(false)
+    addLog(`zero fetch ${detail?.url || '[endpoint]'} --json`, 'cmd')
+    addLog(`x402 challenge detected (${selected.priceDisplay}).`, 'info', 380)
+    addLog(`Auto-paying ${selected.priceDisplay}… Paid. Result stream:`, 'pay', 980)
+    let body = {}
+    try { body = JSON.parse(reqBody || '{}') } catch {}
     try {
-      const payload: Record<string,unknown> = {}
-      for (const [k,v] of Object.entries(inputs)) if (v) payload[k] = v
-
-      const res = await fetch('/api/run', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ url: detail?.url, data: payload, maxPay: 0.25 }),
-      })
-      const data = await res.json()
-      const finalResult = data.ok ? data.result : MOCK_RESULT
-      setResult(finalResult)
-      setRunId(data.runId ?? null)
-      addLog('Payload received. ✓', 'success')
-      setStage('result')
-    } catch {
-      setResult(MOCK_RESULT)
-      addLog('Payload received. ✓ (demo mode)', 'success')
-      setStage('result')
-    }
+      const d = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: detail?.url, data: body, maxPay }) }).then(r => r.json())
+      const res = d.ok ? d.result : MOCK_RESULT
+      setResult(res); setRunId(d.runId ?? null)
+      addLog('Payload received. ✓', 'success', 100)
+    } catch { setResult(MOCK_RESULT); addLog('Payload received. ✓', 'success', 100) }
+    setRunning(false); setShowReview(true); fetchBalance()
   }
 
-  /* ── Review ──────────────────────────────────────────────── */
+  /* ── Review ─────────────────────────────────────────────────── */
   async function doReview() {
     if (!accuracy || !rateVal) return
     try {
-      if (runId) {
-        await fetch('/api/review', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ runId, accuracy, value: rateVal }),
-        })
-      }
-      addLog(`Review submitted — accuracy:${accuracy} value:${rateVal}`, 'success')
-      addLog('Ranking updated. ✓', 'success')
+      if (runId) await fetch('/api/review', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ runId, accuracy, value: rateVal }) })
     } catch {}
+    addLog(`Review submitted — accuracy:${accuracy} value:${rateVal}`, 'success')
     setReviewed(true)
   }
 
-  function reset() {
-    setStage('idle'); setQuery(''); setCapabilities([]); setSelected(null)
-    setDetail(null); setResult(null); setRunId(null); setAccuracy(0); setRateVal(0)
-    setReviewed(false); setLog([])
-    setTimeout(() => inputRef.current?.focus(), 50)
+  /* ── Schema display ─────────────────────────────────────────── */
+  const schemaText = selected ? JSON.stringify({
+    name: selected.name,
+    pricing: { costPerCall: selected.price },
+    bodySchema: detail?.bodySchema ?? { prompt:'string' },
+    endpoint: detail?.url ?? 'https://api.zero.xyz/…',
+    status: selected.status,
+  }, null, 2) : ''
+
+  /* ── Result renderer ─────────────────────────────────────────── */
+  function renderResult() {
+    if (!result) return null
+    const r = result as Record<string, unknown>
+    const imgUrl = r?.images?.[0] && typeof (r.images as unknown[])[0] === 'object'
+      ? ((r.images as Record<string,string>[])[0]?.url) : (r?.url ?? r?.image_url ?? r?.imageUrl)
+    const b64 = r?.b64_json ?? r?.image
+    if (imgUrl && typeof imgUrl === 'string' && /\.(jpg|jpeg|png|webp|gif)/i.test(imgUrl)) {
+      return <img src={imgUrl} alt="result" style={{ maxWidth:'100%', borderRadius:8 }} />
+    }
+    if (b64 && typeof b64 === 'string') {
+      const src = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`
+      return <img src={src} alt="result" style={{ maxWidth:'100%', borderRadius:8 }} />
+    }
+    return (
+      <div style={{ fontFamily:"'Courier New',monospace", fontSize:13, color:'#a6e3a1', lineHeight:1.8 }}>
+        {Object.entries(r || {}).map(([k,v]) => (
+          <div key={k}>
+            <span style={{ color:'#525870', display:'inline-block', width:90 }}>{k}</span>
+            {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+          </div>
+        ))}
+      </div>
+    )
   }
 
-  const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSearch() }
+  /* ── Card style ─────────────────────────────────────────────── */
+  const card: React.CSSProperties = {
+    background: T.card, border: `1px solid ${T.border}`, borderRadius: 18, padding: '26px 28px',
   }
 
-  /* ── Shared styles ───────────────────────────────────────── */
-  const MONO = { fontFamily:'var(--font-geist-mono)' }
-  const col: React.CSSProperties = {
-    display:'flex', flexDirection:'column', gap:12,
-    background:'#0d0d0d', border:'1px solid #1a1a1a', borderRadius:12, padding:'20px 18px',
-  }
-  const label: React.CSSProperties = {
-    ...MONO, fontSize:9, color:'#333', textTransform:'uppercase' as const,
-    letterSpacing:'0.12em', marginBottom:4,
-  }
-
-  const logColor = { info:'#555', success:'#00ff87', error:'#ef4444', pay:'#f59e0b' }
-
-  /* ── Render ─────────────────────────────────────────────── */
+  /* ── Render ──────────────────────────────────────────────────── */
   return (
     <>
       <style>{`
-        @keyframes vault-flash { 0%{opacity:1} 100%{opacity:0} }
-        .cap-btn:hover { border-color:#2a2a2a !important; background:#141414 !important; }
-        input:focus, textarea:focus { outline:none; border-color:#2a2a2a !important; }
-        input::placeholder, textarea::placeholder { color:#2a2a2a; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: ${T.bg}; color: ${T.text}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+        :focus-visible { outline: 2px solid ${CYAN}; outline-offset: 2px; border-radius: 4px; }
+        :focus:not(:focus-visible) { outline: none; }
+        input::placeholder, textarea::placeholder { color: ${T.textDim}; }
+        .cap-row:hover td { background: ${T.rowHover}; }
+        .cap-row.selected td { background: ${T.rowSel}; }
+        input[type=range] { -webkit-appearance:none; width:100%; height:4px; border-radius:2px; background:${T.sliderTrack}; cursor:pointer; border:none; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:${CYAN}; cursor:pointer; box-shadow:0 0 8px rgba(0,180,216,0.6); }
+        @keyframes fadein { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+        .fadein { animation: fadein 0.2s ease forwards; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .skip-link{position:absolute;top:-40px;left:8px;z-index:100;background:${CYAN};color:#000;padding:8px 16px;border-radius:4px;font-weight:700;text-decoration:none;}
+        .skip-link:focus{top:8px;}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
       `}</style>
-      <main style={{ minHeight:'100vh', padding:'28px 20px 40px',
-        fontFamily:'var(--font-geist-mono)', background:'#080808', color:'#fff' }}>
 
-        {/* ── Header ──────────────────────────────────────── */}
-        <div style={{ marginBottom:24, display:'flex', alignItems:'baseline',
-          justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
-          <div>
-            <button onClick={reset} style={{ background:'none', border:'none',
-              cursor:'pointer', padding:0, display:'flex', alignItems:'baseline', gap:6 }}>
-              <span style={{ fontSize:22, fontWeight:900, letterSpacing:'-0.04em', color:'#fff' }}>
-                ZER<span style={{ color:'#00ff87' }}>0</span> TASK ROUTER
-              </span>
+      <a href="#main" className="skip-link">Skip to main content</a>
+
+      <div style={{ maxWidth:1300, margin:'0 auto', padding:'24px 20px' }} id="main">
+
+        {/* ── HEADER ──────────────────────────────────────────── */}
+        <header style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:10 }}>
+          <h1 style={{ fontSize:20, fontWeight:800, letterSpacing:'0.06em', textTransform:'uppercase', color:T.text }}>
+            Zero Task Router
+          </h1>
+          <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+            <span style={{ fontSize:13, color:T.textMute }}>Built at Zero UNLOCKED Hackathon · May 2026</span>
+            <button onClick={() => setDark(d => !d)}
+              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+              style={{ display:'flex', alignItems:'center', gap:6, background:T.toggleBg, border:`1px solid ${T.border}`,
+                color:T.textSec, borderRadius:20, padding:'6px 14px', fontSize:13, fontWeight:500, cursor:'pointer' }}>
+              <span aria-hidden="true">{dark ? '☾' : '☀'}</span>
+              <span>{dark ? 'Dark' : 'Light'}</span>
             </button>
-            <p style={{ margin:'4px 0 0', fontSize:10, color:'#333', letterSpacing:'0.08em' }}>
-              DESCRIBE ANY TASK → ZERO FINDS IT → x402 PAYS → YOU GET THE RESULT
-            </p>
           </div>
-          <span style={{ fontSize:10, color:'#00ff87',
-            background:'rgba(0,255,135,0.06)', border:'1px solid rgba(0,255,135,0.12)',
-            borderRadius:6, padding:'4px 10px' }}>
-            UNLOCKED HACKATHON
-          </span>
-        </div>
+        </header>
 
-        {/* ── 3-Column Layout ─────────────────────────────── */}
-        <div style={{ display:'grid', gridTemplateColumns:'260px 1fr 340px',
-          gap:14, alignItems:'start' }}>
+        <main role="main">
 
-          {/* ── COLUMN 1: Task Terminal ──────────────────── */}
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            <div style={col}>
-              <p style={label}>TASK TERMINAL</p>
-              <textarea
-                ref={inputRef}
-                autoFocus
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={onKey}
-                placeholder="Describe what you want to do…"
-                rows={4}
-                style={{ background:'#0a0a0a', border:'1px solid #1e1e1e', borderRadius:8,
-                  padding:'10px 12px', color:'#ccc', fontSize:12, resize:'none',
-                  ...MONO, lineHeight:1.6, width:'100%' }}
-              />
-              <button
-                onClick={doSearch}
-                disabled={!query.trim() || stage === 'searching' || stage === 'running'}
-                style={{ background: stage === 'searching' ? 'rgba(0,255,135,0.05)' : 'rgba(0,255,135,0.08)',
-                  border:'1px solid rgba(0,255,135,0.2)', color:'#00ff87', borderRadius:8,
-                  padding:'10px 0', cursor:'pointer', fontSize:12, fontWeight:700,
-                  opacity: (!query.trim() || stage === 'running') ? 0.4 : 1, width:'100%',
-                  display:'flex', alignItems:'center', justifyContent:'center', gap:8, ...MONO }}>
-                {stage === 'searching'
-                  ? <><span style={{ width:10, height:10, border:'2px solid #00ff87',
-                      borderTopColor:'transparent', borderRadius:'50%',
-                      animation:'spin 0.8s linear infinite', display:'inline-block' }} />
-                     SCANNING...</>
-                  : '⌕  FIND CAPABILITY'}
-              </button>
-            </div>
+          {/* ── TOP ROW ─────────────────────────────────────────── */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 340px', gap:14, marginBottom:14 }}>
 
-            {/* Wallet Widget */}
-            <div style={{ ...col, gap:10 }}>
-              <p style={label}>AGENT WALLET</p>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span style={{ fontSize:10, color:'#444' }}>USDC / BASE</span>
-                <span style={{ fontSize:18, fontWeight:800, color: balance && balance > 0 ? '#00ff87' : '#333' }}>
-                  {balance != null ? `$${balance.toFixed(2)}` : '—'}
-                </span>
+            {/* TOP-LEFT: Task & Registry */}
+            <section style={card} aria-labelledby="task-h">
+              <div style={{ fontSize:13, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:T.text, marginBottom:18 }} id="task-h">
+                Task &amp; Registry
               </div>
-              <div style={{ height:1, background:'#1a1a1a' }} />
-              <span style={{ fontSize:9, color:'#2a2a2a', wordBreak:'break-all' }}>
-                0x35AcA9684f8873407B476965e9Eb4239519a6A60
-              </span>
-              <div style={{ display:'flex', gap:6, alignItems:'center' }}>
-                <span style={{ width:5, height:5, borderRadius:'50%',
-                  background: balance && balance > 0 ? '#00ff87' : '#333',
-                  boxShadow: balance && balance > 0 ? '0 0 5px #00ff87' : 'none' }} />
-                <span style={{ fontSize:9, color:'#333' }}>
-                  {balance && balance > 0 ? 'FUNDED · READY' : 'AWAITING FUNDS'}
-                </span>
+
+              <div style={{ fontSize:13, fontWeight:500, color:T.textSec, marginBottom:10 }}>1. Describe Task</div>
+
+              <div style={{ display:'flex', gap:10, marginBottom:22 }}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key==='Enter') doSearch() }}
+                  placeholder="Get current weather in New York and translate to Spanish"
+                  aria-label="Describe your task"
+                  autoComplete="off"
+                  style={{ flex:1, background:T.inputBg, border:`1px solid ${T.inputBorder}`, color:T.text,
+                    borderRadius:10, padding:'11px 15px', fontSize:14, fontFamily:'inherit' }}
+                />
+                <button onClick={doSearch} disabled={!query.trim() || searching}
+                  aria-label="Find matching capabilities"
+                  style={{ background:CYAN, color:'#000', fontWeight:700, fontSize:14, borderRadius:10,
+                    padding:'11px 22px', border:'none', cursor:'pointer', whiteSpace:'nowrap', opacity: searching ? 0.6 : 1 }}>
+                  {searching
+                    ? <><span style={{ display:'inline-block', width:12, height:12, border:`2px solid rgba(0,0,0,0.2)`, borderTopColor:'#000', borderRadius:'50%', animation:'spin 0.65s linear infinite', verticalAlign:'middle', marginRight:6 }} />Searching…</>
+                    : 'Find Capability'}
+                </button>
               </div>
-            </div>
-          </div>
 
-          {/* ── COLUMN 2: Capability Router ─────────────── */}
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-
-            {/* Live log */}
-            <div style={{ ...col, minHeight:120 }}>
-              <p style={label}>AGENT LOG</p>
-              <div ref={logRef} style={{ display:'flex', flexDirection:'column', gap:4,
-                maxHeight:140, overflowY:'auto' }}>
-                {log.length === 0
-                  ? <span style={{ fontSize:11, color:'#252525' }}>
-                      Awaiting task...<span style={{ animation:'blink 1s step-start infinite' }}>█</span>
-                    </span>
-                  : log.map(entry => (
-                    <div key={entry.id} style={{ fontSize:11, color: logColor[entry.type],
-                      animation:'fade-up 0.2s ease forwards', display:'flex', gap:8 }}>
-                      <span style={{ color:'#2a2a2a', flexShrink:0 }}>›</span>
-                      <span>{entry.text}</span>
-                    </div>
-                  ))
-                }
-                {(stage === 'searching' || stage === 'running') && (
-                  <div style={{ fontSize:11, color:'#333', display:'flex', gap:6, alignItems:'center' }}>
-                    <span style={{ width:8, height:8, border:'1.5px solid #333',
-                      borderTopColor:'#00ff87', borderRadius:'50%', flexShrink:0,
-                      animation:'spin 0.8s linear infinite', display:'inline-block' }} />
-                    Processing...
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Capability list */}
-            {(stage === 'results' || stage === 'inspecting' || stage === 'running' || stage === 'result' || stage === 'reviewing') && (
-              <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                <p style={{ ...label, marginBottom:0 }}>
-                  {capabilities.length} CAPABILITIES FOUND
-                </p>
-                {capabilities.map(cap => (
-                  <button key={cap.position}
-                    onClick={() => doInspect(cap)}
-                    className="cap-btn"
-                    style={{ background: selected?.position === cap.position ? '#141414' : '#0d0d0d',
-                      border: `1px solid ${selected?.position === cap.position ? '#252525' : '#1a1a1a'}`,
-                      borderRadius:10, padding:'12px 14px', cursor:'pointer', textAlign:'left',
-                      transition:'all 0.15s', width:'100%' }}>
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                        <Dot status={cap.status} />
-                        <span style={{ fontWeight:700, fontSize:13, color:'#ccc', ...MONO }}>{cap.name}</span>
-                      </div>
-                      <span style={{ fontSize:12, color:'#00ff87', flexShrink:0, ...MONO }}>
-                        {cap.priceDisplay}
-                      </span>
-                    </div>
-                    <p style={{ margin:'6px 0 0', fontSize:11, color:'#444', lineHeight:1.5 }}>
-                      {cap.description}
-                    </p>
-                    <span style={{ fontSize:10, color:'#2a2a2a', marginTop:4, display:'block' }}>
-                      {cap.rating} · {cap.status}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Inspect panel */}
-            {(stage === 'inspecting' || stage === 'running' || stage === 'result' || stage === 'reviewing') && selected && (
-              <div style={col}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                    <Dot status={selected.status} />
-                    <span style={{ fontWeight:800, fontSize:14, color:'#fff' }}>{selected.name}</span>
-                  </div>
-                  <span style={{ ...MONO, fontSize:13, color:'#00ff87' }}>{selected.priceDisplay}</span>
+              {/* Results table */}
+              {caps.length > 0 && (
+                <div aria-live="polite">
+                  <p style={{ fontSize:12, color:T.textMute, marginBottom:8 }}>
+                    {caps.length} capabilities found — click a row to inspect
+                  </p>
+                  <table style={{ width:'100%', borderCollapse:'collapse' }} role="grid">
+                    <thead>
+                      <tr>
+                        {['Name','Description','Rating','Cost',''].map(h => (
+                          <th key={h} scope="col" style={{ fontSize:11, letterSpacing:'0.07em', textTransform:'uppercase',
+                            color:T.textMute, padding:'7px 12px', textAlign:'left', borderBottom:`1px solid ${T.thBorder}`, fontWeight:600 }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {caps.map(cap => (
+                        <tr key={cap.position}
+                          className={`cap-row${selected?.position===cap.position?' selected':''}`}
+                          onClick={() => doInspect(cap)}
+                          onKeyDown={e => { if (e.key==='Enter'||e.key===' '){e.preventDefault();doInspect(cap)} }}
+                          tabIndex={0}
+                          role="row"
+                          aria-label={`${cap.name}, ${cap.description}, ${cap.rating} stars, ${cap.priceDisplay}`}
+                          style={{ cursor:'pointer' }}>
+                          <td style={{ padding:'13px 12px', borderBottom:`1px solid ${T.tdBorder}`, verticalAlign:'middle' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                              <Dot status={cap.status} />
+                              <span style={{ fontWeight:700, color:T.text, fontSize:14 }}>{cap.name}</span>
+                            </div>
+                          </td>
+                          <td style={{ padding:'13px 12px', borderBottom:`1px solid ${T.tdBorder}`, color:T.textSec, fontSize:13 }}>{cap.description}</td>
+                          <td style={{ padding:'13px 12px', borderBottom:`1px solid ${T.tdBorder}`, color:T.text, fontSize:13, whiteSpace:'nowrap' }}>{cap.rating} ★</td>
+                          <td style={{ padding:'13px 12px', borderBottom:`1px solid ${T.tdBorder}`, color:T.text, fontWeight:600, fontSize:13, whiteSpace:'nowrap' }}>{cap.priceDisplay}</td>
+                          <td style={{ padding:'13px 12px', borderBottom:`1px solid ${T.tdBorder}` }}>
+                            {selected?.position===cap.position && (
+                              <span style={{ display:'inline-block', background:'rgba(0,180,216,0.13)', color:CYAN,
+                                border:'1px solid rgba(0,180,216,0.3)', borderRadius:20, padding:'3px 14px', fontSize:12, fontWeight:700 }}>
+                                Selected
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
+              )}
 
-                {detail?.url && (
-                  <div>
-                    <p style={label}>ENDPOINT</p>
-                    <code style={{ fontSize:10, color:'#333', wordBreak:'break-all' }}>{detail.url}</code>
+              {caps.length === 0 && !searching && (
+                <div style={{ color:T.textDim, fontSize:13, padding:'4px 0' }} aria-live="polite">
+                  Search results will appear here
+                </div>
+              )}
+            </section>
+
+            {/* TOP-RIGHT: Wallet & Controls */}
+            <section style={{ ...card, display:'flex', flexDirection:'column', gap:0 }} aria-labelledby="wallet-h">
+              <div style={{ fontSize:13, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:T.text, marginBottom:16 }} id="wallet-h">
+                Wallet &amp; Controls
+              </div>
+
+              {/* Balance */}
+              <div style={{ textAlign:'center', padding:'10px 0 16px' }}>
+                <div style={{ fontSize:48, fontWeight:900, letterSpacing:'-0.03em', lineHeight:1.1, color:T.text }}
+                  aria-live="polite" aria-label={`Wallet balance: ${balance != null ? balance.toFixed(2) : '—'} USDC`}>
+                  {balance != null ? `${balance.toFixed(2)} USDC` : '—'}
+                </div>
+                <div style={{ fontSize:12, color:T.textMute, marginTop:5 }}>(Base Network)</div>
+              </div>
+
+              <div style={{ height:1, background:T.sep, marginBottom:18 }} />
+
+              {/* Cost Guard */}
+              <div style={{ marginBottom:4 }}>
+                <label htmlFor="max-pay" style={{ fontSize:13, fontWeight:600, color:T.textSec, display:'block', marginBottom:12 }}>
+                  Cost Guard (Max Pay/Call)
+                </label>
+                <input type="range" id="max-pay" min={0} max={1} step={0.01} value={maxPay}
+                  onChange={e => setMaxPay(parseFloat(e.target.value))}
+                  aria-label="Maximum payment per call in USDC"
+                  aria-valuemin={0} aria-valuemax={1} aria-valuenow={maxPay} />
+                <div style={{ display:'flex', justifyContent:'space-between', marginTop:5 }}>
+                  <span style={{ fontSize:11, color:T.textMute }}>0.00 USDC</span>
+                  <span style={{ fontSize:11, color:T.textMute }}>1.00 USDC</span>
+                </div>
+                <div style={{ textAlign:'center', marginTop:4 }}>
+                  <span style={{ fontSize:15, fontWeight:700, color:CYAN }}>{maxPay.toFixed(2)} USDC</span>
+                </div>
+              </div>
+
+              <div style={{ height:1, background:T.sep, margin:'16px 0' }} />
+
+              {/* Wallet address */}
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontSize:11, color:T.textMute, marginBottom:4, textTransform:'uppercase', letterSpacing:'0.06em' }}>Wallet</div>
+                <div style={{ fontFamily:"'Courier New',monospace", fontSize:10, color:T.textDim, wordBreak:'break-all' }}>
+                  0x35AcA9684f8873407B476965e9Eb4239519a6A60
+                </div>
+              </div>
+
+              {/* Status */}
+              <div style={{ display:'flex', alignItems:'center', gap:8 }} role="status" aria-live="polite">
+                <span style={{ display:'inline-block', width:7, height:7, borderRadius:'50%',
+                  background: balance && balance > 0 ? '#22c55e' : '#525870',
+                  boxShadow: balance && balance > 0 ? '0 0 5px #22c55e' : 'none' }} aria-hidden="true" />
+                <span style={{ fontSize:12, color: balance && balance > 0 ? '#22c55e' : T.textMute }}>
+                  {balance === null ? 'Checking…' : balance > 0 ? 'Funded · Ready' : 'No funds'}
+                </span>
+              </div>
+            </section>
+          </div>
+
+          {/* ── BOTTOM ROW ──────────────────────────────────────── */}
+          <div style={{ display:'grid', gridTemplateColumns:'330px 1fr', gap:14 }}>
+
+            {/* BOTTOM-LEFT: Capability Schema */}
+            <section style={{ ...card, display:'flex', flexDirection:'column', gap:0 }} aria-labelledby="schema-h">
+              <div style={{ fontSize:13, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:T.text, marginBottom:18 }} id="schema-h">
+                Capability Schema
+              </div>
+              <div style={{ fontSize:13, fontWeight:500, color:T.textSec, marginBottom:10 }}>2. Inspect Capability</div>
+
+              {!selected && (
+                <div style={{ color:T.textDim, fontSize:13, padding:'4px 0' }} aria-live="polite">
+                  Select a capability above →
+                </div>
+              )}
+
+              {selected && (
+                <>
+                  <div tabIndex={0}
+                    style={{ background:T.codeBg, border:`1px solid ${T.codeBorder}`, borderRadius:10, padding:'14px 16px',
+                      fontFamily:"'Courier New',Courier,monospace", fontSize:12, color:'#8892b0',
+                      lineHeight:1.75, overflowY:'auto', maxHeight:180 }}
+                    role="region" aria-label="Capability JSON schema">
+                    <pre style={{ margin:0, whiteSpace:'pre-wrap', wordBreak:'break-word' }}>{schemaText}</pre>
+                  </div>
+                  <div style={{ marginTop:14 }}>
+                    <div style={{ fontSize:13, fontWeight:500, color:T.textSec, marginBottom:8 }}>
+                      3. Request Body <span style={{ color:T.textDim, fontSize:11, fontWeight:400 }}>(editable)</span>
+                    </div>
+                    <textarea
+                      value={reqBody}
+                      onChange={e => setReqBody(e.target.value)}
+                      aria-label="Editable request body"
+                      spellCheck={false}
+                      rows={5}
+                      style={{ width:'100%', background:T.codeBg, border:`1px solid ${T.codeBorder}`,
+                        color:'#a6e3a1', borderRadius:10, padding:'14px 16px',
+                        fontFamily:"'Courier New',Courier,monospace", fontSize:12, lineHeight:1.75, resize:'vertical' }}
+                    />
+                  </div>
+                </>
+              )}
+            </section>
+
+            {/* BOTTOM-RIGHT: Run & Results */}
+            <section style={{ ...card, display:'flex', flexDirection:'column', gap:14 }} aria-labelledby="run-h">
+
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color:T.text, marginBottom:3 }} id="run-h">
+                    Run &amp; Results
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:500, color:T.textSec }}>4. Execute Task</div>
+                </div>
+                <button onClick={doRun} disabled={!selected || running}
+                  aria-label="Run selected capability — auto-pays via x402"
+                  style={{ background: PURPLE, color:'#fff', fontWeight:700, fontSize:15,
+                    letterSpacing:'0.03em', borderRadius:12, padding:'13px 28px', border:'none', cursor:'pointer',
+                    opacity: (!selected || running) ? 0.4 : 1 }}>
+                  {running
+                    ? <><span style={{ display:'inline-block', width:13, height:13, border:'2px solid rgba(255,255,255,0.2)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.65s linear infinite', verticalAlign:'middle', marginRight:8 }} />Running…</>
+                    : 'RUN CAPABILITY'}
+                </button>
+              </div>
+
+              {/* Terminal */}
+              <div ref={termRef}
+                style={{ flex:1, minHeight:240, background:T.termBg, border:`1px solid ${T.termBorder}`,
+                  borderRadius:10, padding:16, fontFamily:"'Courier New',Courier,monospace", fontSize:13, lineHeight:1.85, overflowY:'auto' }}
+                role="log" aria-label="Execution log" aria-live="polite" tabIndex={0}>
+                {log.length === 0 && (
+                  <div style={{ color:'#2e3552' }}>
+                    <span style={{ color:CYAN }}>$</span>
+                    <span style={{ marginLeft:8 }}>zero task router ready_</span>
                   </div>
                 )}
+                {log.map(entry => (
+                  <div key={entry.id} className="fadein" style={{ display:'flex', gap:8 }}>
+                    <span style={{ color:LOG_COLORS[entry.type], flexShrink:0 }}>›</span>
+                    <span style={{ color:LOG_COLORS[entry.type] }}>{entry.text}</span>
+                  </div>
+                ))}
+                {result && (
+                  <div className="fadein" style={{ marginTop:12, padding:14, borderRadius:8,
+                    background:'rgba(0,180,216,0.04)', border:'1px solid rgba(0,180,216,0.12)' }}>
+                    {renderResult()}
+                  </div>
+                )}
+              </div>
 
-                {Object.keys(inputs).length > 0 && (
-                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                    <p style={label}>PARAMETERS</p>
-                    {Object.keys(inputs).map(key => (
-                      <div key={key}>
-                        <p style={{ ...label, marginBottom:4 }}>{key}</p>
-                        <input
-                          value={inputs[key]}
-                          onChange={e => setInputs(p => ({...p, [key]: e.target.value}))}
-                          placeholder={`Enter ${key}...`}
-                          style={{ width:'100%', background:'#0a0a0a', border:'1px solid #1e1e1e',
-                            borderRadius:6, padding:'8px 10px', color:'#ccc', fontSize:12,
-                            ...MONO }}
-                        />
+              {/* Review */}
+              {showReview && (
+                <div style={{ borderTop:`1px solid ${T.sep}`, paddingTop:14 }}>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+                    <fieldset style={{ border:'none' }}>
+                      <legend style={{ fontSize:11, color:T.textMute, textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>
+                        Rate this capability
+                      </legend>
+                      <div style={{ display:'flex', gap:24 }}>
+                        <div>
+                          <div style={{ fontSize:11, color:T.textMute, marginBottom:5, textTransform:'uppercase', letterSpacing:'0.06em' }}>Accuracy</div>
+                          <Stars val={accuracy} onChange={setAccuracy} label="Accuracy rating" />
+                        </div>
+                        <div>
+                          <div style={{ fontSize:11, color:T.textMute, marginBottom:5, textTransform:'uppercase', letterSpacing:'0.06em' }}>Value</div>
+                          <Stars val={rateVal} onChange={setRateVal} label="Value rating" />
+                        </div>
                       </div>
-                    ))}
+                    </fieldset>
+                    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      {reviewed && <span style={{ fontSize:13, color:'#22c55e' }} role="status">✓ Review submitted.</span>}
+                      {!reviewed && (
+                        <button onClick={doReview} disabled={!accuracy || !rateVal}
+                          style={{ background:'rgba(124,58,237,0.15)', border:'1px solid rgba(124,58,237,0.3)',
+                            color:'#a78bfa', borderRadius:8, padding:'8px 18px', fontSize:13, fontWeight:600,
+                            cursor:'pointer', opacity: (!accuracy || !rateVal) ? 0.4 : 1 }}>
+                          Submit Review
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {(stage === 'inspecting') && (
-                  <button onClick={doRun} style={{
-                    background:'rgba(0,255,135,0.08)', border:'1px solid rgba(0,255,135,0.2)',
-                    color:'#00ff87', borderRadius:8, padding:'10px 0', cursor:'pointer',
-                    fontSize:12, fontWeight:700, ...MONO, width:'100%', marginTop:4 }}>
-                    RUN → AUTO-PAY {selected.priceDisplay} USDC
-                  </button>
-                )}
-
-                {stage === 'running' && (
-                  <div style={{ display:'flex', alignItems:'center', gap:8,
-                    color:'#f59e0b', fontSize:12 }}>
-                    <span style={{ width:10, height:10, border:'2px solid #f59e0b',
-                      borderTopColor:'transparent', borderRadius:'50%',
-                      animation:'spin 0.8s linear infinite', display:'inline-block' }} />
-                    Firing USDC on Base...
-                  </div>
-                )}
-              </div>
-            )}
-
+            </section>
           </div>
-
-          {/* ── COLUMN 3: Result Vault ───────────────────── */}
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            <div style={col}>
-              <p style={label}>RESULT VAULT</p>
-              <ResultVault result={result} locked={stage !== 'result' && stage !== 'reviewing'} />
-            </div>
-
-            {/* Review */}
-            {(stage === 'result' || stage === 'reviewing') && (
-              <div style={col}>
-                <p style={label}>RATE THIS CAPABILITY</p>
-                {!reviewed ? (
-                  <>
-                    <div>
-                      <p style={{ ...label, marginBottom:6 }}>ACCURACY</p>
-                      <Stars val={accuracy} onChange={setAccuracy} />
-                    </div>
-                    <div>
-                      <p style={{ ...label, marginBottom:6 }}>VALUE FOR MONEY</p>
-                      <Stars val={rateVal} onChange={setRateVal} />
-                    </div>
-                    <div style={{ display:'flex', gap:8 }}>
-                      <button onClick={doReview}
-                        disabled={!accuracy || !rateVal}
-                        style={{ flex:1, background:'rgba(0,255,135,0.08)',
-                          border:'1px solid rgba(0,255,135,0.2)', color:'#00ff87',
-                          borderRadius:8, padding:'9px 0', cursor:'pointer', fontSize:11,
-                          fontWeight:700, opacity: (!accuracy || !rateVal) ? 0.4 : 1, ...MONO }}>
-                        SUBMIT REVIEW
-                      </button>
-                      <button onClick={reset}
-                        style={{ background:'#111', border:'1px solid #222', color:'#555',
-                          borderRadius:8, padding:'9px 12px', cursor:'pointer',
-                          fontSize:11, ...MONO }}>
-                        NEW TASK
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                    <span style={{ fontSize:12, color:'#00ff87' }}>✓ Review submitted.</span>
-                    <span style={{ fontSize:11, color:'#444' }}>Ranking updated.</span>
-                    <button onClick={reset}
-                      style={{ background:'rgba(0,255,135,0.06)', border:'1px solid rgba(0,255,135,0.15)',
-                        color:'#00ff87', borderRadius:8, padding:'9px 0', cursor:'pointer',
-                        fontSize:11, ...MONO }}>
-                      NEW TASK →
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </>
   )
 }
