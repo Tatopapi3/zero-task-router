@@ -4,16 +4,62 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const ZERO_BIN = `${os.homedir()}/.zero/bin`
 
-/* ── Known capabilities ──────────────────────────────────────── */
-const ALL_CAPS = [
-  { position:1,  name:'Image Generator',  endpoint:'https://x402-gateway-production.up.railway.app/api/image/fast',   price:0.015, priceDisplay:'0.015 USDC/call', rating:'4.9', status:'healthy' as const, description:'Generate images from text prompts using FLUX Schnell',   keywords:['image','photo','picture','generate','create','draw','art','visual','flux'] },
-  { position:2,  name:'Weather API',       endpoint:'https://x402-gateway-production.up.railway.app/api/weather',       price:0.005, priceDisplay:'0.005 USDC/call', rating:'5.0', status:'healthy' as const, description:'Real-time weather data for any location worldwide',     keywords:['weather','temperature','forecast','climate','rain','location'] },
-  { position:3,  name:'Translator Pro',    endpoint:'https://x402-gateway-production.up.railway.app/api/translate',     price:0.001, priceDisplay:'0.001 USDC/call', rating:'4.8', status:'healthy' as const, description:'Translate text between 100+ languages instantly',       keywords:['translate','translation','spanish','french','language','text'] },
-  { position:4,  name:'News Summarizer',   endpoint:'https://x402-gateway-production.up.railway.app/api/news',          price:0.008, priceDisplay:'0.008 USDC/call', rating:'4.7', status:'healthy' as const, description:'Summarize latest news for any topic or keyword',        keywords:['news','summarize','headline','article','latest','today','report'] },
-  { position:5,  name:'Code Assistant',    endpoint:'https://x402-gateway-production.up.railway.app/api/code',          price:0.020, priceDisplay:'0.020 USDC/call', rating:'4.9', status:'healthy' as const, description:'Generate, debug, or explain code in any language',      keywords:['code','programming','function','debug','python','javascript','script'] },
-  { position:6,  name:'Data Analyzer',     endpoint:'https://x402-gateway-production.up.railway.app/api/analyze',       price:0.025, priceDisplay:'0.025 USDC/call', rating:'4.6', status:'stable'  as const, description:'Analyze datasets and return structured insights',       keywords:['data','analyze','statistics','insight','csv','table'] },
-  { position:7,  name:'SEO Optimizer',     endpoint:'https://x402-gateway-production.up.railway.app/api/seo',           price:0.010, priceDisplay:'0.010 USDC/call', rating:'4.5', status:'healthy' as const, description:'Generate SEO-optimized content and keyword suggestions',keywords:['seo','keyword','ranking','content','optimize','google'] },
-  { position:8,  name:'Freight Rate API',  endpoint:'https://x402-gateway-production.up.railway.app/api/freight',       price:1.000, priceDisplay:'1.000 USDC/call', rating:'4.8', status:'healthy' as const, description:'Real-time freight rates for major US shipping lanes',    keywords:['freight','shipping','logistics','rate','container','cargo','route'] },
+/* ── Real verified capabilities from Zero registry ───────────── */
+export const ALL_CAPS = [
+  {
+    position:1, name:'FLUX Image Generator',
+    endpoint:'https://x402-gateway-production.up.railway.app/api/image/fast',
+    capabilityId:'x402-gateway-fast-image-generation-flux-schnell',
+    price:0.015, priceDisplay:'0.015 USDC/call', rating:'4.9', status:'healthy' as const,
+    description:'Generate images from text prompts using FLUX Schnell (~2s)',
+    bodySchema:{ prompt:'string' },
+    keywords:['image','photo','picture','generate','create','draw','art','visual','flux','illustration'],
+  },
+  {
+    position:2, name:'Current Weather',
+    endpoint:'https://weather.payapi.market/current',
+    capabilityId:'weather-payapi-market-1d04726c',
+    price:0.001, priceDisplay:'0.001 USDC/call', rating:'5.0', status:'stable' as const,
+    description:'Real-time weather: temp, humidity, wind for any city worldwide',
+    bodySchema:{ location:'string', latitude:'string', longitude:'string' },
+    keywords:['weather','temperature','forecast','climate','rain','sunny','hot','cold','wind','location'],
+  },
+  {
+    position:3, name:'Weather Forecast',
+    endpoint:'https://weather.withzero.ai/run',
+    capabilityId:'zeroclick-x402-service-registry-weather-0cd7c167',
+    price:0.001, priceDisplay:'0.001 USDC/call', rating:'4.7', status:'healthy' as const,
+    description:'Current weather + 7-day daily forecast for any location worldwide',
+    bodySchema:{ location:'string', latitude:'string', longitude:'string', units:'string' },
+    keywords:['weather','forecast','7-day','week','daily','future'],
+  },
+  {
+    position:4, name:'Bazaar Translator',
+    endpoint:'https://bazaar-gateway.vercel.app/api/translate',
+    capabilityId:'bazaar-gateway-vercel-app-93ea6225',
+    price:0.005, priceDisplay:'0.005 USDC/call', rating:'4.7', status:'healthy' as const,
+    description:'Translate text between any languages using Claude AI — 100% success rate',
+    bodySchema:{ text:'string', target_language:'string' },
+    keywords:['translate','translation','spanish','french','arabic','language','convert','text','words'],
+  },
+  {
+    position:5, name:'OpenWeather Full Forecast',
+    endpoint:'https://openweather.mpp.paywithlocus.com/openweather/onecall',
+    capabilityId:'openweather-onecall-ceae0bee',
+    price:0.010, priceDisplay:'0.010 USDC/call', rating:'4.9', status:'healthy' as const,
+    description:'Comprehensive forecast: current, hourly, daily + weather alerts by coordinates',
+    bodySchema:{ lat:'string', lon:'string', units:'string', lang:'string' },
+    keywords:['weather','forecast','hourly','alert','openweather','detailed','comprehensive'],
+  },
+  {
+    position:6, name:'Grok Image (fal.ai)',
+    endpoint:'https://grok.mpp.paywithlocus.com/grok/imagine',
+    capabilityId:'grok-imagine-image-4ae8e6e9',
+    price:0.040, priceDisplay:'0.040 USDC/call', rating:'4.3', status:'healthy' as const,
+    description:'Generate high-quality images from text prompts using xAI Grok Imagine via fal.ai',
+    bodySchema:{ prompt:'string' },
+    keywords:['image','photo','grok','xai','art','generate','creative','high quality'],
+  },
 ]
 
 function smartSearch(query: string) {
@@ -28,20 +74,19 @@ function smartSearch(query: string) {
   const matches = scored.filter(s => s.score > 0).sort((a,b) => b.score - a.score)
   if (matches.length >= 2) return matches.slice(0,3).map(m => m.cap)
   if (matches.length === 1) return [matches[0].cap, ALL_CAPS[0]]
-  return [ALL_CAPS[0], ALL_CAPS[1]]
+  return [ALL_CAPS[0], ALL_CAPS[3]] // image + translate as default
 }
 
 export async function POST(req: NextRequest) {
   const { query } = await req.json()
 
-  // 1. Try Zero CLI (local dev with CLI installed)
+  // 1. Try Zero CLI (local dev)
   try {
-    const safe = query.replace(/"/g, '\\"')
+    const safe = (query as string).replace(/"/g, '\\"')
     const raw = execSync(`zero search "${safe}"`, {
       env: { ...process.env, PATH: `${ZERO_BIN}:${process.env.PATH}` },
       timeout: 15000, encoding: 'utf8',
     })
-    // Parse CLI output
     const lines = raw.split('\n').filter(Boolean)
     const capabilities: typeof ALL_CAPS = []
     let pos = 1
@@ -50,14 +95,16 @@ export async function POST(req: NextRequest) {
       if (m) {
         const name  = m[2].trim()
         const price = parseFloat(m[3]) || 0
-        const known = ALL_CAPS.find(c => c.name.toLowerCase() === name.toLowerCase())
+        const known = ALL_CAPS.find(c => c.name.toLowerCase().includes(name.toLowerCase().slice(0,8)) || name.toLowerCase().includes(c.name.toLowerCase().slice(0,8)))
         capabilities.push({
           position: pos++, name,
           endpoint: known?.endpoint ?? '',
-          price,
-          priceDisplay: `${price.toFixed(3)} USDC/call`,
+          capabilityId: known?.capabilityId ?? '',
+          price, priceDisplay: `${price.toFixed(3)} USDC/call`,
           rating: '4.5', status: 'healthy' as const,
           description: known?.description ?? name,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          bodySchema: (known?.bodySchema ?? { prompt:'string' }) as any,
           keywords: known?.keywords ?? [],
         })
       }
@@ -65,7 +112,6 @@ export async function POST(req: NextRequest) {
     if (capabilities.length > 0) return NextResponse.json({ ok: true, capabilities })
   } catch {}
 
-  // 2. Smart keyword fallback
-  const capabilities = smartSearch(query || '')
-  return NextResponse.json({ ok: true, capabilities })
+  // 2. Smart keyword fallback (always works on Vercel)
+  return NextResponse.json({ ok: true, capabilities: smartSearch(query || '') })
 }

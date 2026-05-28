@@ -7,6 +7,9 @@ interface Capability {
   position: number; name: string; price: number; priceDisplay: string
   rating: string; status: string; description: string
 }
+interface CapabilityExt extends Capability {
+  endpoint?: string; bodySchema?: Record<string, unknown>
+}
 interface Detail {
   url: string | null; bodySchema: Record<string, unknown> | null; price: number | null; raw: string
 }
@@ -19,11 +22,6 @@ const PURPLE = '#7c3aed'
 const LOG_COLORS: Record<LogType, string> = {
   cmd:'#00b4d8', info:'#89b4fa', success:'#a6e3a1', pay:'#f9e2af', error:'#f38ba8'
 }
-const MOCK_CAPS: Capability[] = [
-  { position:1, name:'Weather API',    price:0.005, priceDisplay:'0.005 USDC/call', rating:'5.0', status:'healthy', description:'Current weather by location' },
-  { position:2, name:'Translator Pro', price:0.001, priceDisplay:'0.001 USDC/call', rating:'4.8', status:'healthy', description:'Translate text between 100+ languages' },
-]
-const MOCK_RESULT = { route:'LA → Chicago', rate:'$2,847 / 40ft container', transit:'4–6 days', updated:'2026-05-27T19:00:00Z' }
 
 /* ── Dot ───────────────────────────────────────────────────────── */
 function Dot({ status }: { status: string }) {
@@ -46,39 +44,22 @@ function Stars({ val, onChange, label }: { val:number; onChange:(n:number)=>void
   )
 }
 
-/* ── Demo seed ─────────────────────────────────────────────────── */
-const DEMO_QUERY  = 'Get current weather in New York and translate to Spanish'
-const DEMO_CAP    = MOCK_CAPS[0]
-const DEMO_DETAIL: Detail = {
-  url: 'https://x402-gateway-production.up.railway.app/api/weather',
-  bodySchema: { location: 'string', units: 'string' },
-  price: 0.005, raw: '',
-}
-const DEMO_BODY   = JSON.stringify({ location: 'New York', units: 'metric' }, null, 2)
-const DEMO_LOG: LogLine[] = [
-  { id:1, text: 'zero search "Get current weather in New York and translate to Spanish"', type:'cmd' },
-  { id:2, text: 'Scanning Zero registry…',                    type:'info'    },
-  { id:3, text: 'Found 2 capabilities.',                      type:'success' },
-  { id:4, text: 'zero get 1 --formatted',                     type:'cmd'     },
-  { id:5, text: 'Schema loaded. Cost: 0.005 USDC/call',       type:'success' },
-]
-
 /* ── Main ───────────────────────────────────────────────────────── */
 export default function Home() {
   const [dark,        setDark]        = useState(true)
-  const [query,       setQuery]       = useState(DEMO_QUERY)
+  const [query,       setQuery]       = useState('')
   const [searching,   setSearching]   = useState(false)
-  const [caps,        setCaps]        = useState<Capability[]>(MOCK_CAPS)
-  const [selected,    setSelected]    = useState<Capability | null>(DEMO_CAP)
-  const [detail,      setDetail]      = useState<Detail | null>(DEMO_DETAIL)
-  const [reqBody,     setReqBody]     = useState(DEMO_BODY)
+  const [caps,        setCaps]        = useState<CapabilityExt[]>([])
+  const [selected,    setSelected]    = useState<CapabilityExt | null>(null)
+  const [detail,      setDetail]      = useState<Detail | null>(null)
+  const [reqBody,     setReqBody]     = useState('')
   const [running,     setRunning]     = useState(false)
   const [result,      setResult]      = useState<unknown>(null)
   const [runId,       setRunId]       = useState<string|null>(null)
   const [balance,     setBalance]     = useState<number|null>(null)
   const [maxPay,      setMaxPay]      = useState(0.05)
-  const [log,         setLog]         = useState<LogLine[]>(DEMO_LOG)
-  const [logN,        setLogN]        = useState(DEMO_LOG.length)
+  const [log,         setLog]         = useState<LogLine[]>([])
+  const [logN,        setLogN]        = useState(0)
   const [accuracy,    setAccuracy]    = useState(0)
   const [rateVal,     setRateVal]     = useState(0)
   const [reviewed,    setReviewed]    = useState(false)
@@ -131,38 +112,63 @@ export default function Home() {
   /* ── Search ─────────────────────────────────────────────────── */
   async function doSearch() {
     if (!query.trim()) return
-    setSearching(true); setCaps([]); setSelected(null); setDetail(null); setResult(null); setRunId(null); setShowReview(false)
+    setSearching(true); setCaps([]); setSelected(null); setDetail(null); setResult(null)
+    setRunId(null); setShowReview(false); setLog([])
     addLog(`zero search "${query}"`, 'cmd')
     addLog('Scanning Zero registry…', 'info', 200)
     try {
-      const d = await fetch('/api/search', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ query }) }).then(r => r.json())
-      const list = d.ok && d.capabilities?.length ? d.capabilities : MOCK_CAPS
+      const d = await fetch('/api/search', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ query }),
+      }).then(r => r.json())
+      const list: CapabilityExt[] = d.ok && d.capabilities?.length ? d.capabilities : []
       setCaps(list)
       addLog(`Found ${list.length} capabilities.`, 'success', 100)
-    } catch {
-      setCaps(MOCK_CAPS); addLog(`Found ${MOCK_CAPS.length} capabilities.`, 'success', 100)
+      // Auto-select the first result
+      if (list.length > 0) {
+        setTimeout(() => doInspect(list[0]), 400)
+      }
+    } catch (e) {
+      addLog('Search failed — check Zero CLI', 'error', 100)
     }
     setSearching(false)
   }
 
   /* ── Inspect ─────────────────────────────────────────────────── */
-  async function doInspect(cap: Capability) {
+  async function doInspect(cap: CapabilityExt) {
     setSelected(cap); setDetail(null); setResult(null); setRunId(null); setShowReview(false)
     addLog(`zero get ${cap.position} --formatted`, 'cmd')
     addLog('Fetching capability schema…', 'info', 200)
     try {
-      const d = await fetch('/api/get', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ identifier: cap.position }) }).then(r => r.json())
+      const endpoint = (cap as CapabilityExt).endpoint ?? ''
+      const d = await fetch('/api/get', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ identifier: cap.position, endpoint }),
+      }).then(r => r.json())
       setDetail(d)
       const body: Record<string,string> = {}
       if (d.bodySchema && typeof d.bodySchema === 'object') {
+        const nl = cap.name.toLowerCase()
         Object.keys(d.bodySchema).forEach(k => {
-          body[k] = ['prompt','query','q','text','input'].includes(k) ? query : ''
+          if (['prompt','query','q','text','input'].includes(k)) body[k] = query
+          else if (k === 'location') body[k] = query.match(/in ([A-Za-z ]+)/i)?.[1]?.trim() ?? 'New York'
+          else if (k === 'target_language' || k === 'target_lang') {
+            const lang = query.match(/to (\w+)/i)?.[1]?.toLowerCase()
+            body[k] = lang === 'arabic' ? 'ar' : lang === 'spanish' ? 'es' : lang === 'french' ? 'fr' : lang ?? 'es'
+          }
+          else if (k === 'latitude') body[k] = '40.7128'
+          else if (k === 'longitude') body[k] = '-74.0060'
+          else if (k === 'units') body[k] = 'metric'
+          else if (k === 'lat') body[k] = '40.7128'
+          else if (k === 'lon') body[k] = '-74.0060'
+          else if (k === 'lang') body[k] = 'en'
+          else if (k === 'model') body[k] = nl.includes('flux') ? 'flux-schnell' : nl.includes('grok') ? 'grok-image' : ''
+          else body[k] = ''
         })
       } else { body.prompt = query }
       setReqBody(JSON.stringify(body, null, 2))
       addLog(`Schema loaded. Cost: ${cap.priceDisplay}`, 'success', 100)
     } catch {
-      setDetail({ url: null, bodySchema: { prompt:'string' }, price: cap.price, raw:'' })
+      setDetail({ url: (cap as CapabilityExt).endpoint ?? null, bodySchema: { prompt:'string' }, price: cap.price, raw:'' })
       setReqBody(JSON.stringify({ prompt: query }, null, 2))
       addLog(`Schema loaded. Cost: ${cap.priceDisplay}`, 'success', 100)
     }
@@ -179,10 +185,10 @@ export default function Home() {
     try { body = JSON.parse(reqBody || '{}') } catch {}
     try {
       const d = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: detail?.url, data: body, maxPay }) }).then(r => r.json())
-      const res = d.ok ? d.result : MOCK_RESULT
+      const res = d.ok ? d.result : { error: d.error ?? 'Run failed' }
       setResult(res); setRunId(d.runId ?? null)
       addLog('Payload received. ✓', 'success', 100)
-    } catch { setResult(MOCK_RESULT); addLog('Payload received. ✓', 'success', 100) }
+    } catch { addLog('Run failed — check console', 'error', 100) }
     setRunning(false); setShowReview(true); fetchBalance()
   }
 
